@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en" data-theme="aurora">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Dancestar OS — a web operating system made entirely of glass.">
+<title>Dancestar OS</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/glass.css">
+<link rel="stylesheet" href="css/desktop.css">
+<link rel="stylesheet" href="css/window.css">
+<link rel="stylesheet" href="css/apps.css">
+</head>
+<body>
+
+<!-- ========== optical filters: real refraction, not just blur ========== -->
+<svg class="ds-filters" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- Edge refraction. Warps whatever sits behind the glass, strongest at the rim. -->
+    <filter id="ds-refract" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.004 0.006" numOctaves="2" seed="11" result="n"/>
+      <feGaussianBlur in="n" stdDeviation="6" result="ns"/>
+      <feDisplacementMap in="SourceGraphic" in2="ns" scale="14"
+                         xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+
+    <!-- Chromatic dispersion: split RGB slightly, like light through a prism. -->
+    <filter id="ds-disperse" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+      <feOffset in="SourceGraphic" dx="-1.1" dy="0" result="r"/>
+      <feOffset in="SourceGraphic" dx="1.1"  dy="0" result="b"/>
+      <feColorMatrix in="r" result="rc" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"/>
+      <feColorMatrix in="b" result="bc" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+      <feColorMatrix in="SourceGraphic" result="gc" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0"/>
+      <feBlend in="rc" in2="gc" mode="screen" result="rg"/>
+      <feBlend in="rg" in2="bc" mode="screen"/>
+    </filter>
+
+    <!-- Micro-imperfection grain. No glass is optically perfect. -->
+    <filter id="ds-grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.06 0"/>
+    </filter>
+  </defs>
+</svg>
+
+<!-- ========== wallpaper: glass needs something worth refracting ========== -->
+<div class="wallpaper" id="wallpaper" aria-hidden="true">
+  <div class="wp-base"></div>
+  <div class="wp-orbs">
+    <span class="orb orb-1"></span><span class="orb orb-2"></span>
+    <span class="orb orb-3"></span><span class="orb orb-4"></span>
+    <span class="orb orb-5"></span>
+  </div>
+  <div class="wp-grid"></div>
+  <div class="wp-grain"></div>
+</div>
+
+<!-- ========== boot ========== -->
+<div class="boot" id="boot">
+  <div class="boot-mark">
+    <svg viewBox="0 0 64 64" width="76" height="76" aria-hidden="true">
+      <defs>
+        <linearGradient id="bootg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0"   stop-color="#fff" stop-opacity=".95"/>
+          <stop offset=".45" stop-color="#fff" stop-opacity=".25"/>
+          <stop offset="1"   stop-color="#fff" stop-opacity=".8"/>
+        </linearGradient>
+      </defs>
+      <path d="M32 4 L57 32 L32 60 L7 32 Z" fill="none" stroke="url(#bootg)" stroke-width="1.6"/>
+      <path d="M32 15 L46 32 L32 49 L18 32 Z" fill="none" stroke="url(#bootg)" stroke-width="1.1" opacity=".7"/>
+      <path d="M32 26 L38 32 L32 38 L26 32 Z" fill="url(#bootg)" opacity=".6"/>
+    </svg>
+  </div>
+  <div class="boot-name">Dancestar<span>OS</span></div>
+  <div class="boot-bar"><i></i></div>
+  <div class="boot-status" id="boot-status">Initialising optics</div>
+</div>
+
+<!-- ========== desktop ========== -->
+<div class="desktop" id="desktop" hidden>
+
+  <header class="menubar g g-bar" id="menubar">
+    <button class="mb-item mb-logo g-tap" data-menu="system" aria-label="System menu">
+      <svg viewBox="0 0 24 24" width="15" height="15"><path d="M12 2.5 21 12l-9 9.5L3 12z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 8l4 4-4 4-4-4z" fill="currentColor" opacity=".55"/></svg>
+    </button>
+    <button class="mb-item g-tap" data-menu="app" id="mb-appname">Finder</button>
+    <button class="mb-item g-tap" data-menu="view">View</button>
+    <button class="mb-item g-tap" data-menu="help">Help</button>
+
+    <div class="mb-spacer"></div>
+
+    <button class="mb-item mb-icon g-tap" id="mb-glass" title="Glass controls">
+      <svg viewBox="0 0 24 24" width="15" height="15"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="currentColor" opacity=".35"/></svg>
+    </button>
+    <button class="mb-item mb-icon g-tap" id="mb-search" title="Search (Ctrl K)">
+      <svg viewBox="0 0 24 24" width="15" height="15"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+    </button>
+    <div class="mb-item mb-clock" id="mb-clock"><span id="clock-day"></span><span id="clock-time"></span></div>
+  </header>
+
+  <div class="desk-icons" id="desk-icons"></div>
+  <div class="windows-layer" id="windows"></div>
+
+  <div class="dock-wrap">
+    <nav class="dock g" id="dock" aria-label="Dock"></nav>
+  </div>
+
+  <div class="launcher" id="launcher" hidden>
+    <div class="launcher-inner g" role="dialog" aria-label="Launcher">
+      <div class="lch-search">
+        <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="1.5"/></svg>
+        <input id="lch-input" type="text" placeholder="Search apps, files and commands…" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="lch-results" id="lch-results"></div>
+    </div>
+  </div>
+
+  <div class="menu-pop g" id="menu-pop" hidden></div>
+  <div class="ctx g" id="ctxmenu" hidden></div>
+  <div class="toasts" id="toasts"></div>
+  <div class="snap-hint" id="snap-hint" hidden></div>
+</div>
+
+<script src="js/core/util.js"></script>
+<script src="js/core/store.js"></script>
+<script src="js/core/glass.js"></script>
+<script src="js/core/fs.js"></script>
+<script src="js/core/ui.js"></script>
+<script src="js/core/wm.js"></script>
+<script src="js/apps/finder.js"></script>
+<script src="js/apps/notes.js"></script>
+<script src="js/apps/terminal.js"></script>
+<script src="js/apps/calc.js"></script>
+<script src="js/apps/settings.js"></script>
+<script src="js/apps/music.js"></script>
+<script src="js/apps/photos.js"></script>
+<script src="js/apps/about.js"></script>
+<script src="js/shell.js"></script>
+<script src="js/boot.js"></script>
+</body>
+</html>

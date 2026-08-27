@@ -1,0 +1,248 @@
+/* ═══════════════════════════════════════════════════════════════
+   window.css — window chrome
+
+   A window is just a large piece of glass. It has no opaque
+   background at any point, which means windows stacked over other
+   windows refract each other. That is the whole point.
+   ═══════════════════════════════════════════════════════════════ */
+
+.windows-layer {
+  position: absolute;
+  inset: var(--menubar-h) 0 0 0;
+  z-index: 20;
+  /* The layer sits above the desktop icons, so empty areas of it must
+     pass clicks through to whatever is underneath. */
+  pointer-events: none;
+}
+
+.win {
+  position: absolute;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 300px;
+  min-height: 180px;
+  overflow: hidden;
+  box-shadow: var(--g-inset), var(--shadow-deep);
+  animation: winOpen 340ms var(--ease-back);
+  contain: layout;
+}
+@keyframes winOpen {
+  from { opacity: 0; transform: scale(.9) translateY(14px); }
+}
+.win.closing {
+  animation: winClose 200ms var(--ease) forwards;
+  pointer-events: none;
+}
+@keyframes winClose {
+  to { opacity: 0; transform: scale(.93) translateY(6px); }
+}
+.win.minimizing {
+  animation: winMin 300ms var(--ease) forwards;
+  pointer-events: none;
+}
+@keyframes winMin {
+  to { opacity: 0; transform: scale(.35) translateY(45vh); }
+}
+
+/* An unfocused window recedes: less tint, less light, more distance. */
+.win:not(.focused) {
+  --g-alpha: .055;
+  --g-sheen: .18;
+  box-shadow: var(--g-inset), 0 2px 8px -4px rgb(0 0 0 / .3), 0 20px 50px -22px rgb(0 0 0 / .5);
+}
+.win:not(.focused) .win-title { color: var(--text-3); }
+.win:not(.focused) .lt { filter: saturate(.15) brightness(.85); }
+
+.win.maximized {
+  border-radius: 0;
+  box-shadow: var(--g-inset);
+}
+.win.maximized .g-edge { display: none; }
+
+/* ───────────────────── TITLE BAR ───────────────────── */
+.win-bar {
+  position: relative;
+  z-index: 3;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 11px;
+  cursor: default;
+  /* the bar is a slightly thicker piece of the same pane */
+  background: linear-gradient(180deg,
+    rgb(var(--edge-hi) / .10), rgb(var(--edge-hi) / .02));
+  box-shadow:
+    inset 0 -1px 0 rgb(var(--edge-lo) / .10),
+    0 .5px 0 rgb(var(--edge-hi) / .12);
+}
+
+.win-lights { display: flex; gap: 8px; flex: none; }
+.lt {
+  position: relative;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 130ms var(--ease-back), filter 200ms linear;
+}
+/* Traffic lights are glass beads, not flat dots: tinted, lit from
+   above, with a real specular dot and a caustic glow beneath. */
+.lt::before {
+  content: "";
+  position: absolute; inset: 0; border-radius: 50%;
+  background: linear-gradient(160deg,
+    rgb(255 255 255 / .5), rgb(255 255 255 / .06) 55%, rgb(255 255 255 / .3));
+  box-shadow:
+    inset 0 .5px 0 rgb(255 255 255 / .85),
+    inset 0 -1px 3px -1px rgb(0 0 0 / .35),
+    0 0 0 .5px rgb(255 255 255 / .3);
+}
+.lt::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2.6px;
+  width: 4px; height: 3px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / .9);
+  filter: blur(.4px);
+}
+.lt-close { background: hsl(358 82% 58% / .78); box-shadow: 0 0 10px -2px hsl(358 82% 58% / .7); }
+.lt-min   { background: hsl(40 92% 56% / .78);  box-shadow: 0 0 10px -2px hsl(40 92% 56% / .7); }
+.lt-max   { background: hsl(140 62% 46% / .78); box-shadow: 0 0 10px -2px hsl(140 62% 46% / .7); }
+.lt:hover { transform: scale(1.22); }
+.lt:active { transform: scale(.9); }
+
+.win-title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--text-2);
+  text-shadow: 0 1px 2px rgb(var(--edge-lo) / .35);
+  transition: color 220ms linear;
+}
+.win-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.win-title svg { opacity: .7; flex: none; }
+.win-tools { display: flex; gap: 5px; flex: none; align-items: center; }
+
+/* ───────────────────── BODY ───────────────────── */
+.win-body {
+  position: relative;
+  z-index: 3;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  /* deliberately no background — the desktop shows through */
+}
+.win-body.pad { padding: 16px; }
+.win-body.flush { overflow: hidden; display: flex; }
+
+/* ───────────────────── RESIZE HANDLES ───────────────────── */
+.rz { position: absolute; z-index: 6; }
+.rz-n  { top: -3px;  left: 10px; right: 10px; height: 7px;  cursor: ns-resize; }
+.rz-s  { bottom: -3px; left: 10px; right: 10px; height: 7px; cursor: ns-resize; }
+.rz-w  { left: -3px;  top: 10px; bottom: 10px; width: 7px;  cursor: ew-resize; }
+.rz-e  { right: -3px; top: 10px; bottom: 10px; width: 7px;  cursor: ew-resize; }
+.rz-nw { top: -4px; left: -4px;  width: 16px; height: 16px; cursor: nwse-resize; }
+.rz-ne { top: -4px; right: -4px; width: 16px; height: 16px; cursor: nesw-resize; }
+.rz-sw { bottom: -4px; left: -4px;  width: 16px; height: 16px; cursor: nesw-resize; }
+.rz-se { bottom: -4px; right: -4px; width: 16px; height: 16px; cursor: nwse-resize; }
+.win.maximized .rz { display: none; }
+
+/* ───────────────────── SNAP PREVIEW ─────────────────────
+   Shown while a window is dragged to a screen edge. */
+.snap-hint {
+  position: absolute;
+  z-index: 500;
+  pointer-events: none;
+  border-radius: var(--g-radius);
+  background: rgb(var(--edge-hi) / .10);
+  backdrop-filter: blur(10px) saturate(160%);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  box-shadow:
+    inset 0 0 0 1.5px rgb(var(--edge-hi) / .45),
+    inset 0 2px 20px -6px rgb(var(--refract-cool) / .6),
+    0 12px 40px -12px rgb(var(--edge-lo) / .5);
+  transition: all 160ms var(--ease);
+  animation: snapIn 160ms var(--ease);
+}
+@keyframes snapIn { from { opacity: 0; transform: scale(.97); } }
+
+/* ───────────────────── SHARED APP FURNITURE ───────────────────── */
+.app-side {
+  flex: none;
+  width: 186px;
+  padding: 12px 10px;
+  overflow-y: auto;
+  background: linear-gradient(180deg,
+    rgb(var(--edge-lo) / .10), rgb(var(--edge-lo) / .04));
+  box-shadow: inset -1px 0 0 rgb(var(--edge-hi) / .10);
+}
+.app-main { flex: 1; min-width: 0; overflow: auto; }
+.app-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  box-shadow: inset 0 -1px 0 rgb(var(--edge-hi) / .10);
+}
+.app-statusbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 26px;
+  padding: 0 12px;
+  font-size: 11px;
+  color: var(--text-3);
+  box-shadow: inset 0 1px 0 rgb(var(--edge-hi) / .09);
+}
+.side-label {
+  padding: 8px 8px 5px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.side-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  cursor: default;
+  transition: background 150ms linear, color 150ms linear;
+}
+.side-item:hover { background: rgb(var(--edge-hi) / .1); color: var(--text); }
+.side-item.on {
+  color: var(--text);
+  background: linear-gradient(120deg, rgb(var(--edge-hi) / .18), rgb(var(--edge-hi) / .08));
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .22),
+              inset 0 1px 6px -3px rgb(var(--refract-cool) / .5);
+}
+.side-item svg { flex: none; opacity: .8; }
+.side-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  min-height: 160px;
+  color: var(--text-3);
+  font-size: 12.5px;
+  text-align: center;
+}
+.empty-state svg { opacity: .35; }

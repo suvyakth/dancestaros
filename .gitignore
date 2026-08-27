@@ -1,0 +1,10 @@
+# editor / OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+.vscode/
+
+# nothing is built or installed for this project — it runs as-is
+node_modules/
