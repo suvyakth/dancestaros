@@ -22,6 +22,15 @@
     },
     refraction: true,
     wallpaperMotion: true,
+
+    /* personalisation */
+    setupDone: false,
+    accentHue: null,        // null = follow the theme's own accent
+    avatar: { glyph: "✦", grad: 0 },
+    greeting: true,
+
+    /* user-defined shell commands: { name: "body" } */
+    customCmds: {},
     dockApps: ["finder", "notes", "terminal", "calc", "music", "photos", "settings", "about"],
     user: "you",
     fs: null,

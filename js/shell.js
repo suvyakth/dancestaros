@@ -54,6 +54,7 @@
   var MENUS = {
     system: function () {
       return [
+        { title: DS.store.get("user", "you") },
         { label: "About This System", icon: "about", action: function () { DS.wm.open("about"); } },
         { label: "System Settings…", icon: "settings", kbd: "Ctrl ,", action: function () { DS.wm.open("settings"); } },
         { sep: true },
@@ -116,6 +117,41 @@
     }
   };
 
+  /* The avatar bead in the menu bar. Repainted automatically whenever
+     the profile changes, from the wizard or from Settings. */
+  shell.paintAvatar = function () {
+    var host = DS.qs("#mb-avatar");
+    if (!host) return;
+    var a = DS.store.get("avatar", { glyph: "✦", grad: 0 });
+    DS.clear(host);
+    host.appendChild(h("div.av.av-sm", {
+      text: a.glyph,
+      style: { background: DS.avatarGrad(a.grad) }
+    }));
+    host.title = DS.store.get("user", "you");
+  };
+
+  function profileMenu(btn) {
+    DS.ui.pop(btn, [
+      { title: DS.landing.greetWord() + ", " + DS.store.get("user", "you") },
+      { label: "Appearance & bead…", icon: "palette", action: function () {
+          DS.wm.open("settings", { pane: "appearance" });
+        } },
+      { label: "Tune the glass…", icon: "layers", action: function () {
+          DS.wm.open("settings", { pane: "glass" });
+        } },
+      { sep: true },
+      { label: "Replay first-run setup", icon: "refresh", action: function () {
+          DS.store.set("setupDone", false);
+          location.reload();
+        } },
+      { label: "Lock the screen", icon: "lock", action: function () {
+          DS.qs("#desktop").hidden = true;
+          DS.landing.lock(function () { DS.qs("#desktop").hidden = false; });
+        } }
+    ]);
+  }
+
   function wireMenuBar() {
     DS.qsa("[data-menu]").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -124,6 +160,9 @@
     });
     DS.qs("#mb-search").addEventListener("click", function () { shell.launcher(true); });
     DS.qs("#mb-glass").addEventListener("click", controlCentre);
+    DS.qs("#mb-avatar").addEventListener("click", function () {
+      profileMenu(DS.qs("#mb-avatar"));
+    });
     DS.qs("#mb-clock").addEventListener("click", function () {
       var d = new Date();
       DS.ui.toast({
@@ -536,6 +575,11 @@
     wireKeys();
     shell.buildDock();
     shell.buildDesktopIcons();
+    shell.paintAvatar();
+
+    DS.store.on(function (path) {
+      if (path.indexOf("avatar") === 0 || path === "user") shell.paintAvatar();
+    });
     DS.glass.applyMotion();
     DS.glass.dress(DS.qs("#desktop"));
 

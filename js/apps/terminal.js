@@ -1,6 +1,12 @@
 /* ═══════════════════════════════════════════════════════════════
-   terminal.js — a real shell over the virtual file system
-   Can also drive the compositor: `glass blur 40`, `theme sunset`.
+   terminal.js — dsh, the Dancestar shell
+
+   A real shell over the virtual file system that can also drive the
+   compositor (`glass blur 40`, `theme sunset`, `party`), teach itself
+   (`tutorial`), and be extended by the user at runtime (`define`).
+
+   User-defined commands are stored in localStorage and survive a
+   reload, so anything invented here becomes part of the OS.
    ═══════════════════════════════════════════════════════════════ */
 (function (DS) {
   "use strict";
@@ -9,27 +15,74 @@
   var fs = DS.fs;
 
   var LOGO = [
-    "        /\\        ",
-    "       /  \\       ",
-    "      / /\\ \\      ",
-    "     / /  \\ \\     ",
-    "    / /    \\ \\    ",
-    "   / /  /\\  \\ \\   ",
-    "  / /  /  \\  \\ \\  ",
-    " /_/__/____\\__\\_\\ "
+    "      /\\      ",
+    "     /  \\     ",
+    "    / /\\ \\    ",
+    "   / /  \\ \\   ",
+    "  / / /\\ \\ \\  ",
+    " /_/_/  \\_\\_\\ "
+  ];
+
+  /* 4x5 block font for `banner` */
+  var FONT = {
+    A: " ██ /█  █/████/█  █/█  █", B: "███ /█  █/███ /█  █/███ ",
+    C: " ███/█   /█   /█   / ███", D: "███ /█  █/█  █/█  █/███ ",
+    E: "████/█   /███ /█   /████", F: "████/█   /███ /█   /█   ",
+    G: " ███/█   /█ ██/█  █/ ███", H: "█  █/█  █/████/█  █/█  █",
+    I: "████/ ██ / ██ / ██ /████", J: "████/  █ /  █ /█ █ / ██ ",
+    K: "█  █/█ █ /██  /█ █ /█  █", L: "█   /█   /█   /█   /████",
+    M: "█  █/████/████/█  █/█  █", N: "█  █/██ █/████/█ ██/█  █",
+    O: " ██ /█  █/█  █/█  █/ ██ ", P: "███ /█  █/███ /█   /█   ",
+    Q: " ██ /█  █/█  █/█ ██/ ███", R: "███ /█  █/███ /█ █ /█  █",
+    S: " ███/█   / ██ /   █/███ ", T: "████/ ██ / ██ / ██ / ██ ",
+    U: "█  █/█  █/█  █/█  █/ ██ ", V: "█  █/█  █/█  █/ ██ / ██ ",
+    W: "█  █/█  █/████/████/█  █", X: "█  █/ ██ / ██ / ██ /█  █",
+    Y: "█  █/█  █/ ██ / ██ / ██ ", Z: "████/  █ / ██ /█   /████",
+    "0": " ██ /█  █/█  █/█  █/ ██ ", "1": " ██ /███ / ██ / ██ /████",
+    "2": "███ /   █/ ██ /█   /████", "3": "███ /   █/ ██ /   █/███ ",
+    "4": "█  █/█  █/████/   █/   █", "5": "████/█   /███ /   █/███ ",
+    "6": " ███/█   /████/█  █/ ██ ", "7": "████/   █/  █ / █  / █  ",
+    "8": " ██ /█  █/ ██ /█  █/ ██ ", "9": " ██ /█  █/████/   █/███ ",
+    " ": "    /    /    /    /    ", "!": " ██ / ██ / ██ /    / ██ ",
+    "?": "███ /   █/ ██ /    / ██ ", ".": "    /    /    /    / ██ ",
+    "-": "    /    /████/    /    "
+  };
+
+  var FORTUNES = [
+    "Glass is honest: it shows you everything behind it, including your mistakes.",
+    "If your transparent UI needs a solid background to be readable, it was never transparent.",
+    "Blur hides detail. Dispersion suggests depth. Only one of them is glass.",
+    "The edge of a pane carries more information than the middle.",
+    "Any sufficiently high tint alpha is indistinguishable from plastic.",
+    "A window you cannot find is worse than a window you cannot see through.",
+    "Refraction is expensive. Spend it at the edges, where the eye looks.",
+    "Every backdrop-filter is a promise you make to the compositor.",
+    "Contrast is not a feature you add at the end.",
+    "Make the focused thing brightest. Everything else is decoration."
+  ];
+
+  var JOKES = [
+    "There are two hard problems in UI: naming things, cache invalidation, and off-by-one contrast ratios.",
+    "I told the compositor a joke about transparency. It saw right through it.",
+    "My glass UI has no bugs. They are just very hard to see.",
+    "A CSS developer walks into a bar. And a pub. And a tavern.",
+    "Why did the window lose focus? It had nothing opaque to hold on to.",
+    "I would tell you a joke about backdrop-filter, but it would take four frames to land."
   ];
 
   DS.apps.register({
     id: "terminal",
     name: "Terminal",
     icon: "terminal",
-    w: 700, h: 440, minW: 420, minH: 240,
+    w: 760, h: 500, minW: 460, minH: 260,
     flush: true,
 
     mount: function (body, api) {
       var cwd = "/Users/you";
       var history = [];
       var hIdx = -1;
+      var timers = [];
+      var tut = -1;                       // tutorial step, -1 = inactive
 
       var out = h("div.tm-out");
       var promptEl = h("span.tm-prompt");
@@ -38,8 +91,33 @@
       var pane = h("div.tm-pane", {}, [out, row]);
       body.appendChild(pane);
 
+      /* ───────────── output helpers ───────────── */
+      function write(text, cls) {
+        var line = h("pre.tm-line" + (cls ? "." + cls : ""), { text: text });
+        out.appendChild(line);
+        pane.scrollTop = pane.scrollHeight;
+        return line;
+      }
+      function blank() { write(""); }
+
+      function box(lines, cls) {
+        var w = 0;
+        lines.forEach(function (l) { w = Math.max(w, l.length); });
+        write("╭─" + rep("─", w) + "─╮", cls);
+        lines.forEach(function (l) {
+          write("│ " + l + rep(" ", w - l.length) + " │", cls);
+        });
+        write("╰─" + rep("─", w) + "─╯", cls);
+      }
+      function rep(c, n) { return n > 0 ? new Array(n + 1).join(c) : ""; }
+      function pad(s, n) {
+        s = String(s);
+        return s.length >= n ? s : s + rep(" ", n - s.length);
+      }
+
       function shortCwd() {
-        return cwd === fs.HOME ? "~" : cwd.indexOf(fs.HOME) === 0 ? "~" + cwd.slice(fs.HOME.length) : cwd;
+        if (cwd === fs.HOME) return "~";
+        return cwd.indexOf(fs.HOME) === 0 ? "~" + cwd.slice(fs.HOME.length) : cwd;
       }
       function drawPrompt() {
         DS.clear(promptEl);
@@ -47,21 +125,16 @@
         promptEl.appendChild(h("b", { text: " " + shortCwd() }));
         promptEl.appendChild(h("u", { text: " $ " }));
       }
-
-      function write(text, cls) {
-        var line = h("pre.tm-line" + (cls ? "." + cls : ""), { text: text });
-        out.appendChild(line);
-        pane.scrollTop = pane.scrollHeight;
-        return line;
-      }
       function writeEcho(cmd) {
         var line = h("pre.tm-line.echo");
-        line.appendChild(h("span.tm-pre", { text: DS.store.get("user", "you") + "@dancestar " + shortCwd() + " $ " }));
+        line.appendChild(h("span.tm-pre", {
+          text: DS.store.get("user", "you") + "@dancestar " + shortCwd() + " $ "
+        }));
         line.appendChild(h("span", { text: cmd }));
         out.appendChild(line);
       }
 
-      /* ── path resolution ── */
+      /* ───────────── path resolution ───────────── */
       function resolve(arg) {
         if (!arg) return cwd;
         var p = arg;
@@ -77,85 +150,52 @@
         return "/" + stack.join("/");
       }
 
-      /* ── commands ── */
+      /* ───────────── command table ───────────── */
       var CMDS = {};
+      function cmd(name, group, usage, desc, fn) {
+        CMDS[name] = { group: group, usage: usage, desc: desc, fn: fn };
+      }
 
-      CMDS.help = function () {
-        write("Dancestar OS shell — available commands\n");
-        var rows = [
-          ["ls [path]",        "list a directory"],
-          ["cd <path>",        "change directory"],
-          ["pwd",              "print working directory"],
-          ["cat <file>",       "print a file"],
-          ["tree [path]",      "show the tree below a path"],
-          ["mkdir <name>",     "create a directory"],
-          ["touch <name>",     "create an empty file"],
-          ["write <f> <text>", "write text to a file"],
-          ["rm <path>",        "delete a file or directory"],
-          ["mv <a> <b>",       "rename within a directory"],
-          ["open <app|file>",  "launch an app or open a file"],
-          ["apps",             "list installed apps"],
-          ["theme <name>",     "aurora sunset abyss verdant lumen"],
-          ["glass <k> <v>",    "set an optical value live"],
-          ["glass",            "print the optical configuration"],
-          ["echo <text>",      "print text"],
-          ["neofetch",         "system summary"],
-          ["date",             "current date and time"],
-          ["whoami",           "current user"],
-          ["clear",            "clear the screen"],
-          ["exit",             "close the terminal"]
-        ];
-        rows.forEach(function (r) {
-          write("  " + r[0] + Array(Math.max(1, 20 - r[0].length)).join(" ") + "  " + r[1]);
-        });
-      };
-
-      CMDS.ls = function (args) {
-        var target = resolve(args[0]);
+      /* ── files ── */
+      cmd("ls", "files", "ls [path]", "list a directory", function (a) {
+        var target = resolve(a[0]);
         var node = fs.node(target);
-        if (!node) return write("ls: " + (args[0] || target) + ": no such file or directory", "err");
+        if (!node) return write("ls: " + (a[0] || target) + ": no such file or directory", "err");
         if (node.type === "file") return write(node.name);
         var items = fs.list(target);
         if (!items.length) return write("(empty)", "dim");
         items.forEach(function (i) {
-          var size = i.type === "dir" ? "-" : DS.bytes(i.size);
           write("  " + (i.type === "dir" ? "d" : "-") + "  " +
-                pad(size, 9) + "  " + pad(DS.when(i.mtime), 14) + "  " +
-                i.name + (i.type === "dir" ? "/" : ""),
+                pad(i.type === "dir" ? "-" : DS.bytes(i.size), 9) + "  " +
+                pad(DS.when(i.mtime), 14) + "  " + i.name + (i.type === "dir" ? "/" : ""),
                 i.type === "dir" ? "dir" : null);
         });
-      };
+      });
 
-      function pad(s, n) {
-        s = String(s);
-        return s.length >= n ? s : s + Array(n - s.length + 1).join(" ");
-      }
-
-      CMDS.cd = function (args) {
-        var target = resolve(args[0] || "~");
+      cmd("cd", "files", "cd <path>", "change directory", function (a) {
+        var target = resolve(a[0] || "~");
         var node = fs.node(target);
-        if (!node) return write("cd: " + args[0] + ": no such directory", "err");
-        if (node.type !== "dir") return write("cd: " + args[0] + ": not a directory", "err");
+        if (!node) return write("cd: " + a[0] + ": no such directory", "err");
+        if (node.type !== "dir") return write("cd: " + a[0] + ": not a directory", "err");
         cwd = target;
         drawPrompt();
-      };
+      });
 
-      CMDS.pwd = function () { write(cwd); };
+      cmd("pwd", "files", "pwd", "print working directory", function () { write(cwd); });
 
-      CMDS.cat = function (args) {
-        if (!args[0]) return write("cat: missing file", "err");
-        var target = resolve(args[0]);
-        var node = fs.node(target);
-        if (!node) return write("cat: " + args[0] + ": no such file", "err");
-        if (node.type === "dir") return write("cat: " + args[0] + ": is a directory", "err");
+      cmd("cat", "files", "cat <file>", "print a file", function (a) {
+        if (!a[0]) return write("cat: missing file", "err");
+        var node = fs.node(resolve(a[0]));
+        if (!node) return write("cat: " + a[0] + ": no such file", "err");
+        if (node.type === "dir") return write("cat: " + a[0] + ": is a directory", "err");
         if (node.kind === "image") return write("(image: " + node.content + ")", "dim");
         write(node.content || "(empty file)");
-      };
+      });
 
-      CMDS.tree = function (args) {
-        var target = resolve(args[0]);
+      cmd("tree", "files", "tree [path]", "show the tree below a path", function (a) {
+        var target = resolve(a[0]);
         if (!fs.exists(target)) return write("tree: no such path", "err");
-        write(target);
+        write(target, "dir");
         (function walk(path, prefix, depth) {
           if (depth > 4) return;
           var items = fs.list(path);
@@ -166,161 +206,612 @@
             if (i.type === "dir") walk(i.path, prefix + (last ? "    " : "│   "), depth + 1);
           });
         })(target, "", 0);
-      };
+      });
 
-      CMDS.mkdir = function (args) {
-        if (!args[0]) return write("mkdir: missing name", "err");
-        var ok = fs.mkdir(resolve(args[0]));
-        if (!ok) write("mkdir: cannot create " + args[0], "err");
-      };
+      cmd("mkdir", "files", "mkdir <name>", "create a directory", function (a) {
+        if (!a[0]) return write("mkdir: missing name", "err");
+        if (!fs.mkdir(resolve(a[0]))) write("mkdir: cannot create " + a[0], "err");
+      });
 
-      CMDS.touch = function (args) {
-        if (!args[0]) return write("touch: missing name", "err");
-        fs.write(resolve(args[0]), "");
-      };
+      cmd("touch", "files", "touch <name>", "create an empty file", function (a) {
+        if (!a[0]) return write("touch: missing name", "err");
+        fs.write(resolve(a[0]), "");
+      });
 
-      CMDS.write = function (args) {
-        if (args.length < 2) return write("write: usage: write <file> <text>", "err");
-        var target = resolve(args[0]);
-        fs.write(target, args.slice(1).join(" "));
-        write("wrote " + args.slice(1).join(" ").length + " bytes to " + target, "dim");
-      };
+      cmd("write", "files", "write <file> <text>", "write text to a file", function (a) {
+        if (a.length < 2) return write("write: usage: write <file> <text>", "err");
+        var text = a.slice(1).join(" ");
+        fs.write(resolve(a[0]), text);
+        write("wrote " + text.length + " bytes to " + resolve(a[0]), "dim");
+      });
 
-      CMDS.rm = function (args) {
-        if (!args[0]) return write("rm: missing path", "err");
-        var target = resolve(args[0]);
-        if (target === "/" || target === fs.HOME) return write("rm: refusing to remove " + target, "err");
-        if (!fs.remove(target)) write("rm: " + args[0] + ": no such file", "err");
-      };
-
-      CMDS.mv = function (args) {
-        if (args.length < 2) return write("mv: usage: mv <path> <newname>", "err");
-        if (!fs.rename(resolve(args[0]), args[1])) write("mv: failed", "err");
-      };
-
-      CMDS.echo = function (args) { write(args.join(" ")); };
-
-      CMDS.open = function (args) {
-        if (!args[0]) return write("open: usage: open <app|file>", "err");
-        if (DS.apps.get(args[0])) { DS.wm.open(args[0]); return write("launching " + args[0], "dim"); }
-        var target = resolve(args[0]);
-        if (fs.exists(target)) { DS.openPath(target); return write("opening " + target, "dim"); }
-        write("open: " + args[0] + ": not an app or a file", "err");
-      };
-
-      CMDS.apps = function () {
-        DS.apps.all().forEach(function (a) { write("  " + pad(a.id, 12) + a.name); });
-      };
-
-      CMDS.theme = function (args) {
-        var valid = ["aurora", "sunset", "abyss", "verdant", "lumen"];
-        if (!args[0]) return write("current theme: " + DS.store.get("theme"));
-        if (valid.indexOf(args[0]) < 0) return write("theme: unknown. try: " + valid.join(", "), "err");
-        DS.store.set("theme", args[0]);
-        DS.glass.applyTheme();
-        write("theme set to " + args[0], "ok");
-      };
-
-      var GKEYS = {
-        blur: [4, 60, "px"], alpha: [0, 40, "%"], sat: [100, 320, "%"],
-        bright: [80, 140, "%"], thick: [0, 4, "px"], disperse: [0, 160, "%"],
-        sheen: [0, 150, "%"], radius: [0, 40, "px"]
-      };
-
-      CMDS.glass = function (args) {
-        var g = DS.store.get("glass");
-        if (!args[0]) {
-          write("optical configuration");
-          Object.keys(GKEYS).forEach(function (k) {
-            write("  " + pad(k, 10) + g[k] + GKEYS[k][2]);
-          });
-          write("  " + pad("refract", 10) + (DS.store.get("refraction") ? "on" : "off"));
-          return;
+      cmd("rm", "files", "rm <path>", "delete a file or directory", function (a) {
+        if (!a[0]) return write("rm: missing path", "err");
+        var target = resolve(a[0]);
+        if (target === "/" || target === fs.HOME) {
+          return write("rm: refusing to remove " + target + " — nice try", "err");
         }
-        if (args[0] === "refract") {
-          var on = args[1] !== "off" && args[1] !== "0";
-          DS.store.set("refraction", on);
-          DS.glass.redress();
-          return write("refraction " + (on ? "on" : "off"), "ok");
-        }
-        if (!GKEYS[args[0]]) return write("glass: unknown key. try: " + Object.keys(GKEYS).join(", "), "err");
-        if (args[1] === undefined) return write(args[0] + " = " + g[args[0]] + GKEYS[args[0]][2]);
-        var v = parseFloat(args[1]);
-        if (isNaN(v)) return write("glass: not a number: " + args[1], "err");
-        var rng = GKEYS[args[0]];
-        v = DS.clamp(v, rng[0], rng[1]);
-        DS.store.set("glass." + args[0], v);
-        DS.glass.apply();
-        if (DS.qs("#settings-sync")) DS.qs("#settings-sync").click();
-        write(args[0] + " = " + v + rng[2], "ok");
-      };
+        if (!fs.remove(target)) write("rm: " + a[0] + ": no such file", "err");
+      });
 
-      CMDS.date = function () { write(new Date().toString()); };
-      CMDS.whoami = function () { write(DS.store.get("user", "you")); };
-      CMDS.clear = function () { DS.clear(out); };
-      CMDS.exit = function () { api.close(); };
+      cmd("mv", "files", "mv <path> <name>", "rename within a directory", function (a) {
+        if (a.length < 2) return write("mv: usage: mv <path> <newname>", "err");
+        if (!fs.rename(resolve(a[0]), a[1])) write("mv: failed", "err");
+      });
 
-      CMDS.neofetch = function () {
+      cmd("edit", "files", "edit <file>", "open a file in Notes", function (a) {
+        if (!a[0]) return write("edit: missing file", "err");
+        var t = resolve(a[0]);
+        if (!fs.exists(t)) fs.write(t, "");
+        DS.openPath(t);
+        write("opened " + t + " in Notes", "dim");
+      });
+
+      /* ── system ── */
+      cmd("open", "system", "open <app|file>", "launch an app or open a file", function (a) {
+        if (!a[0]) return write("open: usage: open <app|file>", "err");
+        if (DS.apps.get(a[0])) { DS.wm.open(a[0]); return write("launching " + a[0], "dim"); }
+        var t = resolve(a[0]);
+        if (fs.exists(t)) { DS.openPath(t); return write("opening " + t, "dim"); }
+        write("open: " + a[0] + ": not an app or a file", "err");
+      });
+
+      cmd("apps", "system", "apps", "list installed apps", function () {
+        DS.apps.all().forEach(function (x) { write("  " + pad(x.id, 12) + x.name); });
+      });
+
+      cmd("whoami", "system", "whoami", "current user", function () {
+        write(DS.store.get("user", "you"));
+      });
+
+      cmd("me", "system", "me", "your profile", function () {
+        var a = DS.store.get("avatar", {});
+        box([
+          "  " + (a.glyph || "✦") + "   " + DS.store.get("user", "you"),
+          "",
+          "theme    " + DS.store.get("theme"),
+          "accent   " + (DS.store.get("accentHue") === null
+                          ? "follows theme" : "hue " + DS.store.get("accentHue")),
+          "commands " + Object.keys(DS.store.get("customCmds", {})).length + " of your own"
+        ], "ok");
+      });
+
+      cmd("date", "system", "date", "current date and time", function () {
+        write(new Date().toString());
+      });
+
+      cmd("history", "system", "history", "commands you have run", function () {
+        if (!history.length) return write("(nothing yet)", "dim");
+        history.forEach(function (c, i) { write("  " + pad(i + 1, 4) + c); });
+      });
+
+      cmd("clear", "system", "clear", "clear the screen", function () { DS.clear(out); });
+      cmd("exit", "system", "exit", "close the terminal", function () { api.close(); });
+
+      cmd("neofetch", "system", "neofetch", "system summary", function () {
         var g = DS.store.get("glass");
         var info = [
           DS.store.get("user", "you") + "@dancestar",
           "-----------------",
           "OS        Dancestar OS 1.0 (First Light)",
-          "Shell     dsh 1.0",
+          "Shell     dsh 1.1",
           "Theme     " + DS.store.get("theme"),
           "Windows   " + DS.wm.list().length + " open",
           "Apps      " + DS.apps.all().length + " installed",
           "Blur      " + g.blur + "px",
           "Tint      " + (g.alpha / 100).toFixed(3) + " alpha",
           "Dispersn  " + (g.disperse / 100).toFixed(2),
-          "Refract   " + (DS.store.get("refraction") ? "enabled" : "disabled"),
+          "Yours     " + Object.keys(DS.store.get("customCmds", {})).length + " custom commands",
           "Opaque px 0"
         ];
         var n = Math.max(LOGO.length, info.length);
         for (var i = 0; i < n; i++) {
-          var l = LOGO[i] || Array(19).join(" ");
-          write(l + "  " + (info[i] || ""), i < 2 ? "ok" : null);
+          write(pad(LOGO[i] || "", 15) + " " + (info[i] || ""), i < 2 ? "ok" : null);
         }
+      });
+
+      /* ── glass ── */
+      var GKEYS = {
+        blur: [4, 60, "px"], alpha: [0, 40, "%"], sat: [100, 320, "%"],
+        bright: [80, 140, "%"], thick: [0, 4, "px"], disperse: [0, 160, "%"],
+        sheen: [0, 150, "%"], radius: [0, 40, "px"]
       };
 
-      /* ── dispatch ── */
+      function syncSettings() {
+        var b = DS.qs("#settings-sync");
+        if (b) b.click();
+      }
+
+      cmd("glass", "glass", "glass [key] [value]", "read or set an optical property", function (a) {
+        var g = DS.store.get("glass");
+        if (!a[0]) {
+          write("optical configuration", "ok");
+          Object.keys(GKEYS).forEach(function (k) {
+            write("  " + pad(k, 10) + g[k] + GKEYS[k][2]);
+          });
+          write("  " + pad("refract", 10) + (DS.store.get("refraction") ? "on" : "off"));
+          write("");
+          write("try: glass disperse 0    (watch it become plastic)", "dim");
+          return;
+        }
+        if (a[0] === "refract") {
+          var on = a[1] !== "off" && a[1] !== "0";
+          DS.store.set("refraction", on);
+          DS.glass.redress();
+          return write("refraction " + (on ? "on" : "off"), "ok");
+        }
+        if (!GKEYS[a[0]]) {
+          return write("glass: unknown key. try: " + Object.keys(GKEYS).join(", "), "err");
+        }
+        if (a[1] === undefined) return write(a[0] + " = " + g[a[0]] + GKEYS[a[0]][2]);
+        var v = a[1] === "random"
+          ? Math.round(GKEYS[a[0]][0] + Math.random() * (GKEYS[a[0]][1] - GKEYS[a[0]][0]))
+          : parseFloat(a[1]);
+        if (isNaN(v)) return write("glass: not a number: " + a[1], "err");
+        v = DS.clamp(v, GKEYS[a[0]][0], GKEYS[a[0]][1]);
+        DS.store.set("glass." + a[0], v);
+        DS.glass.apply();
+        syncSettings();
+        write(a[0] + " = " + v + GKEYS[a[0]][2], "ok");
+      });
+
+      cmd("preset", "glass", "preset <name>", "apply an optical preset", function (a) {
+        var names = Object.keys(DS.glass.PRESETS);
+        if (!a[0]) {
+          write("presets:", "ok");
+          names.forEach(function (n) {
+            write("  " + pad(n, 10) + DS.glass.PRESETS[n].desc);
+          });
+          return;
+        }
+        if (!DS.glass.usePreset(a[0])) {
+          return write("preset: unknown. try: " + names.join(", "), "err");
+        }
+        syncSettings();
+        write("applied preset: " + DS.glass.PRESETS[a[0]].label, "ok");
+      });
+
+      cmd("theme", "glass", "theme <name>", "switch theme (or `random`)", function (a) {
+        var valid = ["aurora", "sunset", "abyss", "verdant", "lumen"];
+        if (!a[0]) return write("current theme: " + DS.store.get("theme"));
+        var t = a[0] === "random" ? valid[Math.floor(Math.random() * valid.length)] : a[0];
+        if (valid.indexOf(t) < 0) return write("theme: unknown. try: " + valid.join(", "), "err");
+        DS.store.set("theme", t);
+        DS.glass.applyTheme();
+        write("theme set to " + t, "ok");
+      });
+
+      cmd("accent", "glass", "accent <hue|off>", "set the accent hue, 0-359", function (a) {
+        if (!a[0]) {
+          var cur = DS.store.get("accentHue");
+          return write("accent: " + (cur === null ? "follows theme" : "hue " + cur));
+        }
+        if (a[0] === "off" || a[0] === "auto") {
+          DS.store.set("accentHue", null);
+          DS.glass.applyAccent();
+          return write("accent follows the theme again", "ok");
+        }
+        var hu = a[0] === "random" ? Math.floor(Math.random() * 360) : parseInt(a[0], 10);
+        if (isNaN(hu)) return write("accent: expected 0-359, `random`, or `off`", "err");
+        DS.store.set("accentHue", ((hu % 360) + 360) % 360);
+        DS.glass.applyAccent();
+        write("accent hue " + DS.store.get("accentHue"), "ok");
+      });
+
+      /* ── fun ── */
+      cmd("fortune", "fun", "fortune", "a thought about glass", function () {
+        write("  " + FORTUNES[Math.floor(Math.random() * FORTUNES.length)], "ok");
+      });
+
+      cmd("joke", "fun", "joke", "a bad one", function () {
+        write("  " + JOKES[Math.floor(Math.random() * JOKES.length)], "ok");
+      });
+
+      cmd("roll", "fun", "roll [NdM]", "roll dice, e.g. roll 2d20", function (a) {
+        var m = /^(\d*)d(\d+)$/i.exec(a[0] || "1d6");
+        if (!m) return write("roll: try `roll 2d20`", "err");
+        var n = Math.min(parseInt(m[1] || "1", 10), 20);
+        var sides = Math.min(parseInt(m[2], 10), 1000);
+        var rolls = [], total = 0;
+        for (var i = 0; i < n; i++) {
+          var r = 1 + Math.floor(Math.random() * sides);
+          rolls.push(r);
+          total += r;
+        }
+        write("  " + rolls.join("  +  ") + (n > 1 ? "   =  " + total : ""), "ok");
+      });
+
+      cmd("flip", "fun", "flip", "flip a coin", function () {
+        write("  " + (Math.random() < 0.5 ? "heads" : "tails"), "ok");
+      });
+
+      cmd("banner", "fun", "banner <text>", "big block letters", function (a) {
+        var text = (a.join(" ") || "GLASS").toUpperCase().slice(0, 12);
+        var rows = ["", "", "", "", ""];
+        for (var i = 0; i < text.length; i++) {
+          var glyph = FONT[text.charAt(i)] || FONT["?"];
+          var parts = glyph.split("/");
+          for (var r = 0; r < 5; r++) rows[r] += parts[r] + " ";
+        }
+        rows.forEach(function (r) { write(r, "ok"); });
+      });
+
+      cmd("cowsay", "fun", "cowsay <text>", "ask the cow", function (a) {
+        var text = a.join(" ") || "everything is glass";
+        var top = " " + rep("_", text.length + 2);
+        write(top);
+        write("< " + text + " >");
+        write(" " + rep("-", text.length + 2));
+        write("        \\   ^__^");
+        write("         \\  (oo)\\_______");
+        write("            (__)\\       )\\/\\");
+        write("                ||----w |");
+        write("                ||     ||");
+      });
+
+      cmd("matrix", "fun", "matrix", "briefly forget which OS you are on", function () {
+        var chars = "アイウエオカキクケコ01ABCDEFGLASS░▒▓";
+        var W = 46, H = 9, frames = 0;
+        var lines = [];
+        for (var i = 0; i < H; i++) lines.push(h("pre.tm-line.dir", { text: "" }));
+        lines.forEach(function (l) { out.appendChild(l); });
+        var iv = setInterval(function () {
+          for (var r = 0; r < H; r++) {
+            var s = "";
+            for (var c = 0; c < W; c++) {
+              s += Math.random() < 0.22
+                ? chars.charAt(Math.floor(Math.random() * chars.length))
+                : " ";
+            }
+            lines[r].textContent = s;
+          }
+          pane.scrollTop = pane.scrollHeight;
+          frames += 1;
+          if (frames > 34) {
+            clearInterval(iv);
+            lines.forEach(function (l, i2) {
+              l.textContent = i2 === Math.floor(H / 2)
+                ? "            wake up — the glass is still here"
+                : "";
+            });
+          }
+        }, 55);
+        timers.push(iv);
+      });
+
+      cmd("party", "fun", "party", "make the compositor regret this", function () {
+        var themes = ["aurora", "sunset", "abyss", "verdant", "lumen"];
+        var before = {
+          theme: DS.store.get("theme"),
+          disperse: DS.store.get("glass.disperse"),
+          sheen: DS.store.get("glass.sheen"),
+          thick: DS.store.get("glass.thick")
+        };
+        write("  it is a party. 5 seconds.", "ok");
+        DS.store.set("glass.disperse", 155);
+        DS.store.set("glass.sheen", 140);
+        DS.store.set("glass.thick", 3);
+        DS.glass.apply();
+        var n = 0;
+        var iv = setInterval(function () {
+          DS.store.set("theme", themes[n % themes.length]);
+          DS.store.set("accentHue", (n * 47) % 360);
+          DS.glass.applyTheme();
+          n += 1;
+        }, 260);
+        timers.push(iv);
+        var to = setTimeout(function () {
+          clearInterval(iv);
+          DS.store.set("theme", before.theme);
+          DS.store.set("accentHue", null);
+          DS.store.set("glass.disperse", before.disperse);
+          DS.store.set("glass.sheen", before.sheen);
+          DS.store.set("glass.thick", before.thick);
+          DS.glass.applyTheme();
+          DS.glass.apply();
+          syncSettings();
+          write("  ...and back to normal.", "dim");
+        }, 5000);
+        timers.push(to);
+      });
+
+      cmd("sudo", "fun", "sudo <command>", "elevate (optimistically)", function (a) {
+        if (!a.length) return write("sudo: usage: sudo <command>", "err");
+        write("  " + DS.store.get("user", "you") + " is not in the sudoers file.", "err");
+        write("  This incident has been refracted.", "dim");
+      });
+
+      cmd("echo", "fun", "echo <text>", "print text", function (a) { write(a.join(" ")); });
+
+      /* ── custom commands ─────────────────────────────────────
+         The point of the whole section: the user extends the shell
+         at runtime and it persists. */
+      cmd("define", "custom", "define <name> <body>", "invent your own command", function (a) {
+        if (!a.length) {
+          box([
+            "define — make your own command",
+            "",
+            "  define hi echo Hello $1!",
+            "  define work open terminal; open notes; theme abyss",
+            "  define shiny preset crystal; accent random",
+            "",
+            "inside the body you can use:",
+            "  $1 $2 $3   the words typed after your command",
+            "  $*         all of them at once",
+            "  $USER      your name        $THEME  current theme",
+            "  ;          run several commands in order",
+            "",
+            "then:  commands   list yours",
+            "       undefine <name>   remove one"
+          ], "ok");
+          return;
+        }
+        var name = a[0].toLowerCase();
+        if (!/^[a-z][a-z0-9_-]*$/.test(name)) {
+          return write("define: names must start with a letter (a-z, 0-9, - and _)", "err");
+        }
+        if (CMDS[name]) {
+          return write("define: `" + name + "` is a built-in. Pick another name.", "err");
+        }
+        if (a.length < 2) {
+          return write("define: give it something to do, e.g. define " + name + " echo hi", "err");
+        }
+        var bodyText = a.slice(1).join(" ");
+        var all = DS.store.get("customCmds", {});
+        var isNew = !all[name];
+        all[name] = bodyText;
+        DS.store.set("customCmds", all);
+        write("  " + (isNew ? "created" : "updated") + " `" + name + "`", "ok");
+        write("  " + name + "  →  " + bodyText, "dim");
+        write("  try it: " + name, "dim");
+      });
+
+      CMDS.alias = CMDS.define;
+
+      cmd("commands", "custom", "commands", "list the commands you invented", function () {
+        var all = DS.store.get("customCmds", {});
+        var names = Object.keys(all).sort();
+        if (!names.length) {
+          write("  You have not defined any yet.", "dim");
+          write("  Try:  define hi echo Hello $1!", "dim");
+          return;
+        }
+        write("your commands (" + names.length + ")", "ok");
+        names.forEach(function (n) { write("  " + pad(n, 14) + all[n]); });
+      });
+
+      cmd("undefine", "custom", "undefine <name>", "delete one of yours", function (a) {
+        var all = DS.store.get("customCmds", {});
+        if (!a[0] || !all[a[0]]) return write("undefine: no such command of yours", "err");
+        delete all[a[0]];
+        DS.store.set("customCmds", all);
+        write("  removed `" + a[0] + "`", "ok");
+      });
+
+      /* ── help / tutorial ── */
+      var GROUPS = [
+        ["files", "Files"], ["system", "System"], ["glass", "Glass & looks"],
+        ["fun", "Fun"], ["custom", "Your own commands"]
+      ];
+
+      cmd("help", "system", "help [command]", "this list", function (a) {
+        if (a[0] && CMDS[a[0]]) {
+          var c = CMDS[a[0]];
+          write("  " + c.usage, "ok");
+          write("  " + c.desc);
+          return;
+        }
+        if (a[0]) return write("help: no such command: " + a[0], "err");
+
+        GROUPS.forEach(function (grp) {
+          var names = Object.keys(CMDS).filter(function (n) {
+            return CMDS[n].group === grp[0];
+          }).sort();
+          if (!names.length) return;
+          write("");
+          write(grp[1], "ok");
+          names.forEach(function (n) {
+            write("  " + pad(CMDS[n].usage, 22) + CMDS[n].desc);
+          });
+        });
+        var mine = Object.keys(DS.store.get("customCmds", {})).sort();
+        if (mine.length) {
+          write("");
+          write("Yours", "ok");
+          mine.forEach(function (n) {
+            write("  " + pad(n, 22) + DS.store.get("customCmds")[n]);
+          });
+        }
+        write("");
+        write("`tutorial` walks you through it. `fun` lists the toys.", "dim");
+      });
+
+      cmd("fun", "fun", "fun", "the toys, in one list", function () {
+        box([
+          "banner HELLO      big block letters",
+          "cowsay <text>     the cow has opinions",
+          "fortune           a thought about glass",
+          "joke              a bad one",
+          "roll 2d20         dice",
+          "flip              a coin",
+          "matrix            briefly forget which OS you are on",
+          "party             5 seconds of chaos, then tidy again",
+          "sudo <anything>   optimistic",
+          "theme random      surprise yourself",
+          "glass blur random one property, randomised"
+        ], "ok");
+      });
+
+      var TUTORIAL = [
+        {
+          t: "Welcome to dsh.",
+          l: ["This is a real shell over a real (if virtual) file system.",
+              "Everything you do here shows up in Finder and Notes too.",
+              "",
+              "Try:  ls",
+              "Then type `next` to continue."]
+        },
+        {
+          t: "Moving around.",
+          l: ["`ls` lists, `cd` moves, `cat` prints a file.",
+              "`~` means your home folder, `..` means up one.",
+              "",
+              "Try:  cd Documents",
+              "      cat Welcome.txt",
+              "      cd ~"]
+        },
+        {
+          t: "The shell drives the compositor.",
+          l: ["Every optical property of the glass is a live setting,",
+              "and this shell can set them.",
+              "",
+              "Try:  glass",
+              "      glass blur 45",
+              "      glass disperse 0     ← watch it become plastic",
+              "      preset crystal       ← and back to glass"]
+        },
+        {
+          t: "Make it yours.",
+          l: ["Themes change the wallpaper, which is what the glass",
+              "actually refracts. The accent recolours everything else.",
+              "",
+              "Try:  theme sunset",
+              "      accent 300",
+              "      accent off"]
+        },
+        {
+          t: "Now the fun part.",
+          l: ["Try:  banner HI",
+              "      cowsay glass is honest",
+              "      roll 2d20",
+              "      party                ← hold on to something"]
+        },
+        {
+          t: "Invent your own commands.",
+          l: ["`define` adds a command to this shell permanently —",
+              "it is saved and will still be here after a reload.",
+              "",
+              "Try:  define hi echo Hello $1, you look great",
+              "      hi " + DS.store.get("user", "you"),
+              "",
+              "Chain things with `;` :",
+              "      define focus theme abyss; preset minimal; open notes",
+              "",
+              "`commands` lists yours, `undefine <name>` removes one."]
+        },
+        {
+          t: "That is the whole shell.",
+          l: ["`help` has the full command list, `fun` has the toys.",
+              "",
+              "Go and break something. It all lives in localStorage,",
+              "and Settings › Storage can wipe it clean."]
+        }
+      ];
+
+      function showTut() {
+        var s = TUTORIAL[tut];
+        write("");
+        write("── " + (tut + 1) + "/" + TUTORIAL.length + " · " + s.t + " " +
+              rep("─", Math.max(0, 40 - s.t.length)), "ok");
+        s.l.forEach(function (l) { write(l); });
+        write("");
+        write(tut < TUTORIAL.length - 1
+          ? "type `next` to continue, or `tutorial end` to stop"
+          : "tutorial complete — type `help` any time", "dim");
+        if (tut >= TUTORIAL.length - 1) tut = -1;
+      }
+
+      cmd("tutorial", "system", "tutorial", "a six-step tour of the shell", function (a) {
+        if (a[0] === "end" || a[0] === "stop") {
+          tut = -1;
+          return write("tutorial stopped.", "dim");
+        }
+        tut = 0;
+        showTut();
+      });
+
+      cmd("next", "system", "next", "next tutorial step", function () {
+        if (tut < 0) return write("next: no tutorial running. type `tutorial` to start one.", "err");
+        tut += 1;
+        showTut();
+      });
+
+      /* ───────────── dispatch ───────────── */
+      function tokenise(line) {
+        var parts = line.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+        return parts.map(function (p) { return p.replace(/^"|"$/g, ""); });
+      }
+
+      function expand(bodyText, args) {
+        return bodyText
+          .replace(/\$\*/g, args.join(" "))
+          .replace(/\$([1-9])/g, function (_, n) { return args[n - 1] || ""; })
+          .replace(/\$USER/g, DS.store.get("user", "you"))
+          .replace(/\$THEME/g, DS.store.get("theme"))
+          .replace(/\$TIME/g, new Date().toLocaleTimeString());
+      }
+
+      function exec(line, depth) {
+        line = String(line).trim();
+        if (!line) return;
+        if (depth > 8) {
+          write("dsh: too much recursion — a custom command is calling itself", "err");
+          return;
+        }
+        var parts = tokenise(line);
+        var name = parts.shift();
+
+        if (CMDS[name]) {
+          try { CMDS[name].fn(parts); }
+          catch (err) { write(name + ": " + err.message, "err"); }
+          return;
+        }
+
+        var custom = DS.store.get("customCmds", {})[name];
+        if (custom !== undefined) {
+          expand(custom, parts).split(";").forEach(function (piece) {
+            exec(piece, depth + 1);
+          });
+          return;
+        }
+
+        // a gentle nudge rather than a bare error
+        var guess = Object.keys(CMDS).filter(function (c) {
+          return c.indexOf(name.charAt(0)) === 0 && Math.abs(c.length - name.length) < 3;
+        })[0];
+        write("dsh: command not found: " + name +
+              (guess ? "  (did you mean `" + guess + "`?)" : "  (try `help`)"), "err");
+      }
+
       function run(raw) {
-        var line = raw.trim();
         writeEcho(raw);
+        var line = raw.trim();
         if (!line) return;
         history.push(line);
         hIdx = history.length;
-
-        var parts = line.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
-        parts = parts.map(function (p) { return p.replace(/^"|"$/g, ""); });
-        var cmd = parts.shift();
-
-        if (CMDS[cmd]) {
-          try { CMDS[cmd](parts); }
-          catch (err) { write(cmd + ": " + err.message, "err"); }
-        } else {
-          write("dsh: command not found: " + cmd + "  (try: help)", "err");
-        }
+        exec(line, 0);
         pane.scrollTop = pane.scrollHeight;
       }
 
-      /* ── tab completion ── */
+      /* ───────────── tab completion ───────────── */
       function complete() {
         var val = input.value;
         var parts = val.split(" ");
         var frag = parts[parts.length - 1];
 
         if (parts.length === 1) {
-          var hits = Object.keys(CMDS).filter(function (c) { return c.indexOf(frag) === 0; });
+          var pool = Object.keys(CMDS).concat(Object.keys(DS.store.get("customCmds", {})));
+          var hits = pool.filter(function (c) { return c.indexOf(frag) === 0; });
           if (hits.length === 1) input.value = hits[0] + " ";
-          else if (hits.length > 1) write(hits.join("   "), "dim");
+          else if (hits.length > 1) write(hits.sort().join("   "), "dim");
           return;
         }
         var slash = frag.lastIndexOf("/");
         var dirPart = slash >= 0 ? frag.slice(0, slash + 1) : "";
         var namePart = slash >= 0 ? frag.slice(slash + 1) : frag;
-        var listing = fs.list(resolve(dirPart || "."));
-        var matches = listing.filter(function (i) { return i.name.indexOf(namePart) === 0; });
+        var matches = fs.list(resolve(dirPart || ".")).filter(function (i) {
+          return i.name.indexOf(namePart) === 0;
+        });
         if (matches.length === 1) {
           parts[parts.length - 1] = dirPart + matches[0].name + (matches[0].type === "dir" ? "/" : "");
           input.value = parts.join(" ");
@@ -344,19 +835,43 @@
           e.preventDefault();
           if (hIdx < history.length - 1) { hIdx += 1; input.value = history[hIdx]; }
           else { hIdx = history.length; input.value = ""; }
-        } else if (e.key === "l" && (e.ctrlKey || e.metaKey)) {
+        } else if ((e.key === "l" || e.key === "L") && (e.ctrlKey || e.metaKey)) {
           e.preventDefault();
-          CMDS.clear();
+          DS.clear(out);
         }
       });
 
-      pane.addEventListener("pointerup", function (e) {
+      pane.addEventListener("pointerup", function () {
         if (window.getSelection().toString()) return;
         input.focus();
       });
 
+      api.onClose = function () {
+        timers.forEach(function (t) { clearInterval(t); clearTimeout(t); });
+      };
+
+      /* ───────────── the banner ───────────── */
       drawPrompt();
-      write("Dancestar OS 1.0 — dsh shell. Type `help` for commands, `neofetch` for a summary.", "ok");
+      var mine = Object.keys(DS.store.get("customCmds", {})).length;
+      LOGO.forEach(function (l, i) {
+        var side = ["", "  dsh 1.1  ·  Dancestar OS", "", "", "", ""][i];
+        write(l + side, i === 1 ? "ok" : "dir");
+      });
+      write("");
+      box([
+        "New here?   tutorial      a six-step tour",
+        "Lost?       help          every command, grouped",
+        "Bored?      fun           banner, cowsay, matrix, party",
+        "Curious?    neofetch      what this thing is",
+        "",
+        "Make your own:  define hi echo Hello $1!",
+        "                then just type:  hi " + DS.store.get("user", "you")
+      ]);
+      if (mine) {
+        write("");
+        write("You have " + mine + " command" + (mine === 1 ? "" : "s") +
+              " of your own — type `commands` to see them.", "ok");
+      }
       write("");
       setTimeout(function () { input.focus(); }, 80);
     }

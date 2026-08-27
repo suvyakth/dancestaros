@@ -111,6 +111,70 @@
         });
         host.appendChild(grid);
 
+        /* ── accent ── */
+        host.appendChild(DS.ui.section("Accent"));
+        host.appendChild(h("p.st-hint", {
+          text: "Recolours every highlight, focus ring, selection and control " +
+                "in the system. Off means follow the theme's own accent."
+        }));
+        var curHue = DS.store.get("accentHue", null);
+        var hue = h("input.hue-range", {
+          type: "range", min: 0, max: 359, step: 1,
+          value: curHue === null ? 200 : curHue,
+          oninput: function () {
+            DS.store.set("accentHue", parseInt(hue.value, 10));
+            DS.glass.applyAccent();
+            if (!accSw.classList.contains("on")) accSw.classList.add("on");
+          }
+        });
+        var accSw = h("div.g-switch" + (curHue !== null ? ".on" : ""), {
+          onclick: function () {
+            accSw.classList.toggle("on");
+            DS.store.set("accentHue",
+              accSw.classList.contains("on") ? parseInt(hue.value, 10) : null);
+            DS.glass.applyAccent();
+          }
+        }, [h("i")]);
+        host.appendChild(h("div", {
+          style: { display: "flex", "align-items": "center", gap: "14px" }
+        }, [h("div", { style: { flex: "1" } }, [hue]), accSw]));
+
+        /* ── avatar ── */
+        host.appendChild(DS.ui.section("Your bead"));
+        var big = h("div.av.av-lg", {
+          text: DS.store.get("avatar.glyph", "✦"),
+          style: { background: DS.avatarGrad(DS.store.get("avatar.grad", 0)) }
+        });
+        var beads = h("div.land-avgrid");
+        DS.AVATARS.grads.forEach(function (g, i) {
+          var bead = h("div.av" + (i === DS.store.get("avatar.grad", 0) ? ".on" : ""), {
+            style: { background: g },
+            onclick: function () {
+              DS.store.set("avatar.grad", i);
+              DS.qsa(".av", beads).forEach(function (b) { b.classList.remove("on"); });
+              bead.classList.add("on");
+              big.style.background = g;
+            }
+          });
+          beads.appendChild(bead);
+        });
+        host.appendChild(h("div.land-avrow", { style: { "margin-top": "10px" } }, [big, beads]));
+
+        var glyphs = h("div.land-glyphs");
+        DS.AVATARS.glyphs.forEach(function (gl) {
+          var b = h("button" + (gl === DS.store.get("avatar.glyph") ? ".on" : ""), {
+            text: gl,
+            onclick: function () {
+              DS.store.set("avatar.glyph", gl);
+              DS.qsa("button", glyphs).forEach(function (x) { x.classList.remove("on"); });
+              b.classList.add("on");
+              big.textContent = gl;
+            }
+          });
+          glyphs.appendChild(b);
+        });
+        host.appendChild(glyphs);
+
         host.appendChild(DS.ui.section("Wallpaper"));
         host.appendChild(DS.ui.row(
           "Drifting colour",
@@ -145,6 +209,24 @@
             ])
           ])
         ]));
+
+        host.appendChild(DS.ui.section("Presets"));
+        host.appendChild(h("p.st-hint", {
+          text: "Named points in the same eight-property space. Each one moves " +
+                "every slider below."
+        }));
+        var pgrid = h("div.land-grid", { style: { "margin-top": "10px" } });
+        Object.keys(DS.glass.PRESETS).forEach(function (id) {
+          var pr = DS.glass.PRESETS[id];
+          pgrid.appendChild(h("button.land-tile", {
+            onclick: function () {
+              DS.glass.usePreset(id);
+              render();
+              DS.ui.toast({ icon: "layers", title: pr.label, body: pr.desc });
+            }
+          }, [h("b", { text: pr.label }), h("i", { text: pr.desc })]));
+        });
+        host.appendChild(pgrid);
 
         host.appendChild(DS.ui.section("Optics"));
         OPTICS.forEach(function (o) {
@@ -236,6 +318,18 @@
           }
         });
         host.appendChild(DS.ui.row("User name", "Shown in the shell prompt and About.", nameField));
+
+        host.appendChild(DS.ui.row(
+          "Run first-run setup again",
+          "Replays the welcome wizard: name, bead, theme, accent and glass.",
+          h("button.g-btn", {
+            html: DS.icon("refresh", 14) + "<span>Replay</span>",
+            onclick: function () {
+              DS.store.set("setupDone", false);
+              location.reload();
+            }
+          })
+        ));
 
         host.appendChild(DS.ui.section("Dock"));
         host.appendChild(h("p.st-hint", {

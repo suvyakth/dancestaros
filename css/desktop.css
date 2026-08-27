@@ -39,6 +39,9 @@
 .mb-icon { padding: 0 7px; }
 #mb-appname { font-weight: 650; color: var(--text); }
 .mb-spacer { flex: 1; }
+#mb-avatar { padding: 0 5px; }
+#mb-avatar .av { width: 20px; height: 20px; font-size: 10px; }
+
 .mb-clock {
   gap: 8px;
   font-size: 12px;

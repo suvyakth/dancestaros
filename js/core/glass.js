@@ -30,6 +30,61 @@
 
   glass.applyTheme = function () {
     root.setAttribute("data-theme", DS.store.get("theme", "aurora"));
+    glass.applyAccent();
+  };
+
+  /* ── accent ───────────────────────────────────────────────────
+     Each theme ships a sensible accent, but the user can override
+     it with a single hue. Writing it inline on <html> beats the
+     [data-theme] rules; clearing it hands control back to the theme. */
+  glass.applyAccent = function () {
+    var hue = DS.store.get("accentHue", null);
+    if (hue === null || hue === undefined) {
+      root.style.removeProperty("--accent");
+      root.style.removeProperty("--accent-2");
+      return;
+    }
+    root.style.setProperty("--accent", hue + " 100% 66%");
+    root.style.setProperty("--accent-2", ((hue + 96) % 360) + " 90% 74%");
+  };
+
+  /* ── optical presets ──────────────────────────────────────────
+     Named points in the eight-dimensional optics space. Plastic is
+     included deliberately, as the counter-example. */
+  glass.PRESETS = {
+    crystal: {
+      label: "Crystal",
+      desc: "Thin, sharp and highly dispersive. Reads as cut glass.",
+      v: { blur: 14, alpha: 6, sat: 215, bright: 108, thick: 1.7, disperse: 100, sheen: 75, radius: 20 }
+    },
+    liquid: {
+      label: "Liquid",
+      desc: "Thick rims, heavy dispersion, soft corners. Molten.",
+      v: { blur: 24, alpha: 9, sat: 195, bright: 106, thick: 2.4, disperse: 135, sheen: 95, radius: 32 }
+    },
+    frosted: {
+      label: "Frosted",
+      desc: "Deep blur, gentle edges. Quiet and very readable.",
+      v: { blur: 36, alpha: 13, sat: 150, bright: 110, thick: 1.0, disperse: 35, sheen: 35, radius: 24 }
+    },
+    minimal: {
+      label: "Minimal",
+      desc: "Barely there. Tight corners, almost no tint.",
+      v: { blur: 11, alpha: 5, sat: 135, bright: 103, thick: 0.8, disperse: 25, sheen: 25, radius: 10 }
+    },
+    plastic: {
+      label: "Plastic",
+      desc: "The counter-example: no dispersion, no rim, no sheen.",
+      v: { blur: 20, alpha: 22, sat: 140, bright: 104, thick: 0, disperse: 0, sheen: 0, radius: 18 }
+    }
+  };
+
+  glass.usePreset = function (id) {
+    var p = glass.PRESETS[id];
+    if (!p) return false;
+    Object.keys(p.v).forEach(function (k) { DS.store.set("glass." + k, p.v[k]); });
+    glass.apply();
+    return true;
   };
 
   glass.applyMotion = function () {
@@ -104,7 +159,10 @@
     });
   }
 
+  var sheenOn = false;
   glass.initSheen = function () {
+    if (sheenOn) return;          // boot.js and shell.init both call this
+    sheenOn = true;
     document.addEventListener("pointermove", track, { passive: true });
   };
 

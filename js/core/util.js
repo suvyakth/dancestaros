@@ -152,4 +152,29 @@ window.DS = window.DS || {};
   };
 
   DS.hasIcon = function (name) { return !!P[name]; };
+
+  /* ── avatar presets ─────────────────────────────────────────
+     A bead of coloured glass with a glyph on it. Cheap to store
+     (one index + one character) and it themes itself. */
+  DS.AVATARS = {
+    grads: [
+      "linear-gradient(150deg,#22d3ee,#6366f1)",
+      "linear-gradient(150deg,#f43f5e,#fb923c)",
+      "linear-gradient(150deg,#a855f7,#ec4899)",
+      "linear-gradient(150deg,#34d399,#0ea5e9)",
+      "linear-gradient(150deg,#fbbf24,#f43f5e)",
+      "linear-gradient(150deg,#818cf8,#c084fc)",
+      "linear-gradient(150deg,#2dd4bf,#a3e635)",
+      "linear-gradient(150deg,#fda4af,#a855f7)",
+      "linear-gradient(150deg,#94a3b8,#0f172a)",
+      "linear-gradient(150deg,#fcd34d,#22d3ee)"
+    ],
+    glyphs: ["✦", "◈", "❖", "▲", "●", "✦",
+             "♢", "✷", "☾", "✺", "⬡", "✧"]
+  };
+
+  DS.avatarGrad = function (i) {
+    var g = DS.AVATARS.grads;
+    return g[((i || 0) % g.length + g.length) % g.length];
+  };
 })(window.DS);
