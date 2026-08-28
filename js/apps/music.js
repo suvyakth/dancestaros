@@ -191,6 +191,7 @@
 
       /* ── painting ── */
       function paintTrack() {
+        publish();
         var t = TRACKS[idx];
         titleEl.textContent = t.name;
         artistEl.textContent = t.artist;
@@ -210,7 +211,21 @@
         return g[i % g.length];
       }
 
+      function publish() {
+        // the desktop widget is a view onto this, not a second player
+        DS.nowPlaying = {
+          title: TRACKS[idx].name,
+          artist: TRACKS[idx].artist,
+          art: artFor(idx),
+          playing: playing,
+          toggle: toggle,
+          next: function () { select(idx + 1); },
+          prev: function () { select(idx - 1); }
+        };
+      }
+
       function paintControls() {
+        publish();
         btnPlay.innerHTML = DS.icon(playing ? "pause" : "play", 20);
         btnPlay.classList.toggle("on", playing);
         DS.qsa(".mu-item", side).forEach(function (n, i) {
@@ -261,6 +276,7 @@
       }
 
       api.onClose = function () {
+        DS.nowPlaying = null;
         playing = false;
         if (ticker) clearInterval(ticker);
         if (raf) cancelAnimationFrame(raf);

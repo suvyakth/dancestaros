@@ -46,12 +46,23 @@
     flush: true,
 
     mount: function (body, api) {
+      /* Built-ins, plus anything registered on DS.settingsPanes by another
+         file. Each extra is { id, label, icon, after, build(host, ctx) }. */
       var PANES = [
         { id: "appearance", label: "Appearance", icon: "palette", build: paneAppearance },
         { id: "glass",      label: "Glass",      icon: "layers",  build: paneGlass },
         { id: "desktop",    label: "Desktop",    icon: "desktop", build: paneDesktop },
         { id: "storage",    label: "Storage",    icon: "cpu",     build: paneStorage }
       ];
+      (DS.settingsPanes || []).forEach(function (extra) {
+        var at = PANES.map(function (p) { return p.id; }).indexOf(extra.after);
+        var entry = {
+          id: extra.id, label: extra.label, icon: extra.icon,
+          build: function (host) { extra.build(host, { render: render, api: api }); }
+        };
+        if (at >= 0) PANES.splice(at + 1, 0, entry);
+        else PANES.push(entry);
+      });
       var current = (api.arg && api.arg.pane) || "appearance";
       var side = h("aside.app-side");
       var main = h("div.app-main.st-main");
@@ -319,6 +330,64 @@
         });
         host.appendChild(DS.ui.row("User name", "Shown in the shell prompt and About.", nameField));
 
+        host.appendChild(DS.ui.section("Windows"));
+        host.appendChild(DS.ui.row(
+          "Minimise on click-away",
+          "Off keeps windows where they are. “Clicking the desktop” tucks " +
+          "the active window away when you click empty space. “Losing focus” " +
+          "is stricter: only one window is ever open at a time.",
+          DS.ui.segmented([
+            { label: "Off", value: "off" },
+            { label: "Desktop", value: "desktop" },
+            { label: "Focus", value: "focus" }
+          ], DS.store.get("autoMinimise"), function (v) {
+            DS.store.set("autoMinimise", v);
+          })
+        ));
+
+        host.appendChild(DS.ui.row(
+          "Motion",
+          "Reduced shortens window animations and freezes the wallpaper. " +
+          "Off removes every transition in the system.",
+          DS.ui.segmented([
+            { label: "Full", value: "full" },
+            { label: "Reduced", value: "reduced" },
+            { label: "Off", value: "off" }
+          ], DS.store.get("motion"), function (v) {
+            DS.store.set("motion", v);
+            DS.glass.applyMotion();
+          })
+        ));
+
+        host.appendChild(DS.ui.section("Dock"));
+        host.appendChild(DS.ui.row("Position", null,
+          DS.ui.segmented([
+            { label: "Bottom", value: "bottom" },
+            { label: "Left", value: "left" },
+            { label: "Right", value: "right" }
+          ], DS.store.get("dock.position"), function (v) {
+            DS.store.set("dock.position", v);
+            shellDock();
+          })
+        ));
+        host.appendChild(DS.ui.sliderRow({
+          label: "Icon size", min: 32, max: 68, step: 2,
+          value: DS.store.get("dock.size"),
+          format: function (v) { return v + "px"; },
+          onInput: function (v) { DS.store.set("dock.size", v); shellDock(); }
+        }));
+        host.appendChild(DS.ui.row("Magnification", "Icons lift as the pointer passes.",
+          DS.ui.toggle(DS.store.get("dock.magnify"), function (v) {
+            DS.store.set("dock.magnify", v);
+            shellDock();
+          })));
+        host.appendChild(DS.ui.row("Auto-hide", "Slides away until you reach that edge.",
+          DS.ui.toggle(DS.store.get("dock.autohide"), function (v) {
+            DS.store.set("dock.autohide", v);
+            shellDock();
+          })));
+
+        host.appendChild(DS.ui.section("Setup"));
         host.appendChild(DS.ui.row(
           "Run first-run setup again",
           "Replays the welcome wizard: name, bead, theme, accent and glass.",
@@ -331,7 +400,7 @@
           })
         ));
 
-        host.appendChild(DS.ui.section("Dock"));
+        host.appendChild(DS.ui.section("Apps in the dock"));
         host.appendChild(h("p.st-hint", {
           text: "Apps shown in the dock. Unchecking one hides it — you can still " +
                 "launch it from the launcher with Ctrl+K."
@@ -357,6 +426,10 @@
             check
           ]));
         });
+      }
+
+      function shellDock() {
+        if (DS.shell.applyDockLayout) DS.shell.applyDockLayout();
       }
 
       /* ───────────── STORAGE ───────────── */

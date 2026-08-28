@@ -303,6 +303,29 @@
     DS.glass.dress(dock);
   };
 
+  /* Auto-hide: the dock slides away and peeks back when the pointer
+     reaches its edge (or while it is hovered). */
+  function wireDockPeek() {
+    var wrap = DS.qs(".dock-wrap");
+    document.addEventListener("pointermove", function (e) {
+      var d = DS.store.get("dock", {});
+      if (!d.autohide) { wrap.classList.remove("peek"); return; }
+      var pos = d.position || "bottom";
+      var near =
+        pos === "bottom" ? e.clientY > window.innerHeight - 26 :
+        pos === "left"   ? e.clientX < 26 :
+                           e.clientX > window.innerWidth - 26;
+      wrap.classList.toggle("peek", near || wrap.matches(":hover"));
+    }, { passive: true });
+  }
+
+  /** Dock geometry plus the body attribute the layers key off. */
+  shell.applyDockLayout = function () {
+    DS.glass.applyDock();
+    var d = DS.store.get("dock", {});
+    document.body.dataset.dock = d.autohide ? "hidden" : (d.position || "bottom");
+  };
+
   /* ───────────────────── DESKTOP ICONS ───────────────────── */
   shell.buildDesktopIcons = function () {
     var host = DS.qs("#desk-icons");
@@ -359,19 +382,40 @@
           } },
         { label: "New Note", icon: "notes", action: function () { DS.wm.open("notes"); } },
         { sep: true },
-        { title: "Theme" }
-      ].concat(themeItems(), [
-        { sep: true },
-        { label: "Tune the Glass…", icon: "layers", action: function () {
-            DS.wm.open("settings", { pane: "glass" });
-          } },
-        { label: "About This System", icon: "about", action: function () { DS.wm.open("about"); } }
-      ]));
+        { title: "Add widget" }
+      ].concat(
+        DS.widgets.addMenu(),
+        [{ sep: true }, { title: "Theme" }],
+        themeItems(),
+        [
+          { sep: true },
+          { label: "Tune the Glass…", icon: "layers", action: function () {
+              DS.wm.open("settings", { pane: "glass" });
+            } },
+          { label: "Wallpaper studio…", icon: "palette", action: function () {
+              DS.wm.open("settings", { pane: "wallpaper" });
+            } },
+          { label: "About This System", icon: "about", action: function () {
+              DS.wm.open("about");
+            } }
+        ]
+      ));
     });
 
+    /* Clicking empty desktop clears the icon selection and, if the user
+       has asked for it, tucks the focused window away. Anything that is
+       a real surface — a window, the dock, a widget, a menu, a dialog —
+       is excluded, so only a click on nothing counts as clicking away. */
+    var KEEP = ".win, .dock-wrap, .menubar, .ctx, .menu-pop, .cc, .di, " +
+               ".widget, .toast, .dlg-veil, .launcher";
+
     desk.addEventListener("pointerdown", function (e) {
-      if (e.target.closest(".di")) return;
-      DS.qsa(".di.sel").forEach(function (n) { n.classList.remove("sel"); });
+      if (!e.target.closest(".di")) {
+        DS.qsa(".di.sel").forEach(function (n) { n.classList.remove("sel"); });
+      }
+      if (e.button !== 0) return;
+      if (e.target.closest(KEEP)) return;
+      if (DS.store.get("autoMinimise") === "desktop") DS.wm.minimiseFocused();
     });
   }
 
@@ -419,6 +463,26 @@
         DS.store.set("refraction", !DS.store.get("refraction"));
         DS.glass.redress();
       }
+    });
+    Object.keys(DS.widgets.TYPES).forEach(function (t) {
+      var def = DS.widgets.TYPES[t];
+      acts.push({
+        kind: "action", icon: def.icon,
+        title: "Add widget: " + def.label,
+        sub: def.desc,
+        run: function () { DS.widgets.add(t); }
+      });
+    });
+    acts.push({
+      kind: "action", icon: "star",
+      title: DS.focus.snapshot().phase === "idle" ? "Start a focus session" : "Pause / resume focus",
+      sub: "Flowmodoro timer",
+      run: function () { DS.focus.toggle(); }
+    });
+    acts.push({
+      kind: "action", icon: "trash", title: "Remove all widgets",
+      sub: DS.widgets.count() + " on the desktop",
+      run: function () { DS.widgets.clear(); }
     });
     acts.push({
       kind: "action", icon: "x", title: "Close all windows",
@@ -576,6 +640,12 @@
     shell.buildDock();
     shell.buildDesktopIcons();
     shell.paintAvatar();
+    shell.applyDockLayout();
+    wireDockPeek();
+
+    DS.glass.applyWallpaper();
+    DS.widgets.init();
+    DS.alarms.start();
 
     DS.store.on(function (path) {
       if (path.indexOf("avatar") === 0 || path === "user") shell.paintAvatar();

@@ -58,6 +58,8 @@
     // user sees is already correct.
     DS.glass.applyTheme();
     DS.glass.apply();
+    DS.glass.applyWallpaper();
+    DS.glass.applyMotion();
     DS.glass.initSheen();
 
     var firstRun = !DS.store.get("setupDone", false);

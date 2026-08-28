@@ -1,0 +1,217 @@
+/* ═══════════════════════════════════════════════════════════════
+   timers.css — the two time apps, Clock and Focus
+
+   Both lean on the same idea: one very large, very light numeral as
+   the subject, and a glass ring around it carrying the progress.
+   Thin type over glass needs the text-shadow to stay readable when
+   the wallpaper drifts something bright underneath.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ───────────────────── CLOCK ───────────────────── */
+.ck-main { padding: 20px 24px 26px; }
+
+.ck-hero { text-align: center; margin-bottom: 18px; }
+.ck-big {
+  font-size: 52px; font-weight: 180; letter-spacing: -.03em; line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 24px rgb(var(--refract-cool) / .28);
+}
+.ck-bigdate { font-size: 12.5px; color: var(--text-2); margin-top: 4px; }
+
+.ck-zones { display: flex; flex-direction: column; gap: 1px; }
+.ck-zone {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 2px;
+  box-shadow: inset 0 -1px 0 rgb(var(--edge-hi) / .08);
+}
+.ck-zc { flex: 1; min-width: 0; }
+.ck-zc b { display: block; font-size: 12.5px; font-weight: 550; }
+.ck-zc i {
+  display: block; font-size: 10.5px; font-style: normal;
+  color: var(--text-3); margin-top: 1px;
+}
+.ck-zt { font-size: 17px; font-weight: 300; font-variant-numeric: tabular-nums; }
+
+.ck-next {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 12px; margin-top: 8px;
+}
+.ck-next span { font-size: 11px; color: var(--text-3); }
+.ck-next b { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.ck-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ck-form .g-field { flex: 1; min-width: 120px; }
+
+.ck-days { display: flex; gap: 5px; margin-top: 9px; }
+.ck-days button {
+  width: 30px; height: 28px; border-radius: 8px;
+  font-size: 11px; font-weight: 600; color: var(--text-3);
+  background: rgb(var(--edge-lo) / .16);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .16);
+  transition: all 150ms var(--ease);
+}
+.ck-days button:hover { color: var(--text-2); }
+.ck-days button.on {
+  color: #fff;
+  background: linear-gradient(150deg, hsl(var(--accent) / .6), hsl(var(--accent-2) / .45));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .35),
+              0 0 10px -3px hsl(var(--accent) / .6);
+}
+
+.ck-alarm {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 2px;
+  box-shadow: inset 0 -1px 0 rgb(var(--edge-hi) / .08);
+  transition: opacity 200ms linear;
+}
+.ck-alarm.off { opacity: .45; }
+.ck-at {
+  font-size: 24px; font-weight: 250; letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums; min-width: 78px;
+}
+.ck-ac { flex: 1; min-width: 0; }
+.ck-ac b { display: block; font-size: 12.5px; font-weight: 550; }
+.ck-ac i {
+  display: block; font-size: 10.5px; font-style: normal;
+  color: var(--text-3); margin-top: 1px;
+}
+
+.ck-swpane { display: flex; flex-direction: column; align-items: center; }
+.ck-huge {
+  font-size: 46px; font-weight: 180; letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 22px rgb(var(--refract-cool) / .3);
+}
+.ck-swbtns { display: flex; gap: 9px; margin-top: 18px; }
+.ck-presets {
+  display: flex; flex-wrap: wrap; gap: 7px;
+  justify-content: center; margin-top: 16px;
+}
+.ck-presets .g-btn { min-width: 52px; }
+
+.ck-laps { width: 100%; margin-top: 20px; max-height: 190px; overflow-y: auto; }
+.ck-lap {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 14px;
+  padding: 7px 4px; font-size: 12px;
+  box-shadow: inset 0 -1px 0 rgb(var(--edge-hi) / .07);
+}
+.ck-lap span { color: var(--text-3); }
+.ck-lap i {
+  font-style: normal; color: hsl(var(--accent) / 1);
+  font-variant-numeric: tabular-nums;
+}
+.ck-lap b { font-weight: 550; font-variant-numeric: tabular-nums; }
+
+.ck-ringwrap { position: relative; display: grid; place-items: center; margin-top: 6px; }
+.ck-ring { width: 190px; height: 190px; }
+.ck-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ck-ring circle { fill: none; stroke-width: 5; stroke-linecap: round; }
+.ck-ring .bg { stroke: rgb(var(--edge-hi) / .14); }
+.ck-ring .fg {
+  stroke: hsl(var(--accent) / .95);
+  filter: drop-shadow(0 0 6px hsl(var(--accent) / .55));
+  transition: stroke-dashoffset 140ms linear;
+}
+.ck-ringwrap .ck-huge { position: absolute; font-size: 38px; }
+
+/* ───────────────────── FOCUS ───────────────────── */
+.fo-modes { display: flex; justify-content: center; margin-bottom: 6px; }
+
+.fo-dial { position: relative; display: grid; place-items: center; margin: 18px 0 6px; }
+.fo-ring { width: 236px; height: 236px; }
+.fo-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.fo-ring circle { fill: none; stroke-width: 4.5; stroke-linecap: round; }
+.fo-ring .bg { stroke: rgb(var(--edge-hi) / .13); }
+.fo-ring .fg {
+  stroke: hsl(var(--accent) / .95);
+  filter: drop-shadow(0 0 8px hsl(var(--accent) / .55));
+  transition: stroke-dashoffset 300ms linear, stroke 500ms linear;
+}
+[data-phase="break"] .fo-ring .fg { stroke: hsl(var(--ok) / .9); }
+[data-phase="break"] .fo-time { color: hsl(var(--ok) / 1); }
+
+.fo-center { position: absolute; text-align: center; }
+.fo-time {
+  font-size: 48px; font-weight: 170; letter-spacing: -.035em; line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 26px rgb(var(--refract-cool) / .3);
+  transition: color 400ms linear;
+}
+.fo-label { font-size: 12px; color: var(--text-2); margin-top: 4px; letter-spacing: .04em; }
+.fo-earn { font-size: 10.5px; color: var(--text-3); margin-top: 3px; min-height: 14px; }
+
+.fo-btns { display: flex; gap: 9px; justify-content: center; align-items: center; }
+.fo-go { height: 44px; padding: 0 26px; font-size: 14px; }
+
+.fo-tail { margin-top: 8px; }
+.fo-today { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.fo-today span { font-size: 11.5px; color: var(--text-3); }
+.fo-today b { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.fo-bars { display: flex; gap: 6px; align-items: flex-end; height: 78px; }
+.fo-bar {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 5px; height: 100%;
+}
+.fo-bt {
+  flex: 1; width: 100%;
+  display: flex; align-items: flex-end;
+  border-radius: 6px;
+  background: rgb(var(--edge-lo) / .16);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .12);
+  overflow: hidden;
+}
+.fo-bt i {
+  display: block; width: 100%; border-radius: 6px;
+  background: linear-gradient(180deg, hsl(var(--accent) / .85), hsl(var(--accent-2) / .5));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .35),
+              0 0 10px -3px hsl(var(--accent) / .6);
+  transition: height 400ms var(--ease);
+}
+.fo-bar span { font-size: 9.5px; color: var(--text-3); }
+
+
+/* ───────────────── SETTINGS: STUDIO CONTROLS ───────────────── */
+.st-colrow {
+  display: flex; align-items: center; gap: 14px;
+  padding: 9px 0;
+}
+.st-colrow > span { font-size: 12.5px; min-width: 104px; flex: none; }
+.st-orbs { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* a native colour input, dressed as a bead of glass */
+.st-color {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 42px; height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / .4),
+    0 0 0 .5px rgb(var(--edge-hi) / .28),
+    0 3px 10px -5px rgb(var(--edge-lo) / .5);
+  transition: transform 160ms var(--ease-back);
+}
+.st-color:hover { transform: translateY(-2px) scale(1.05); }
+.st-color::-webkit-color-swatch-wrapper { padding: 2px; }
+.st-color::-webkit-color-swatch { border: 0; border-radius: 7px; }
+.st-color::-moz-color-swatch { border: 0; border-radius: 7px; }
+
+.st-widget-row {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 0;
+  box-shadow: inset 0 -1px 0 rgb(var(--edge-hi) / .08);
+}
+.st-wi {
+  flex: none;
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border-radius: 9px;
+  color: var(--text-2);
+  background: rgb(var(--g-tint) / calc(var(--g-alpha) * 1.4));
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .2),
+              inset 0 1px 6px -3px rgb(var(--refract-cool) / .55);
+}

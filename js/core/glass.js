@@ -92,6 +92,74 @@
     DS.qsa(".orb").forEach(function (o) {
       o.style.animationPlayState = on ? "running" : "paused";
     });
+    root.setAttribute("data-motion", DS.store.get("motion", "full"));
+  };
+
+  /* ── wallpaper studio ─────────────────────────────────────────
+     When a custom wallpaper is on, these inline variables override
+     whatever the theme declared. Turning it off simply removes them
+     and the theme takes over again. */
+  var WP_VARS = ["--wp-base", "--o1", "--o2", "--o3", "--o4", "--o5",
+                 "--orb-blur", "--orb-op", "--orb-scale", "--orb-speed", "--wp-grid-op"];
+
+  glass.applyWallpaper = function () {
+    var w = DS.store.get("wallpaper", {});
+    var s = root.style;
+    if (!w.custom) {
+      WP_VARS.forEach(function (v) { s.removeProperty(v); });
+      return;
+    }
+    s.setProperty("--wp-base",
+      "radial-gradient(120% 90% at 20% 10%, " + shade(w.base, 22) + " 0%, " +
+      w.base + " 48%, " + shade(w.base, -40) + " 100%)");
+    (w.orbs || []).forEach(function (c, i) { s.setProperty("--o" + (i + 1), c); });
+    s.setProperty("--orb-blur", w.blur + "px");
+    s.setProperty("--orb-op", (w.opacity / 100).toFixed(2));
+    s.setProperty("--orb-scale", (w.size / 100).toFixed(2));
+    s.setProperty("--orb-speed", (100 / Math.max(10, w.speed)).toFixed(2));
+    s.setProperty("--wp-grid-op", (w.grid / 100).toFixed(3));
+  };
+
+  /** Lighten (amount > 0) or darken a #rrggbb by a percentage. */
+  function shade(hex, amt) {
+    var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(String(hex));
+    if (!m) return hex;
+    var out = "#";
+    for (var i = 1; i <= 3; i++) {
+      var v = parseInt(m[i], 16);
+      v = Math.round(v + (amt > 0 ? (255 - v) * (amt / 100) : v * (amt / 100)));
+      v = DS.clamp(v, 0, 255);
+      out += ("0" + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  glass.shade = shade;
+
+  /* ── dock geometry ── */
+  glass.applyDock = function () {
+    var d = DS.store.get("dock", {});
+    root.style.setProperty("--dk-size", d.size + "px");
+    root.style.setProperty("--dock-h", (d.size + 22) + "px");
+    var wrap = DS.qs(".dock-wrap");
+    var dock = DS.qs("#dock");
+    if (wrap) {
+      wrap.dataset.pos = d.position || "bottom";
+      wrap.classList.toggle("autohide", !!d.autohide);
+    }
+    if (dock) {
+      dock.dataset.pos = d.position || "bottom";
+      dock.classList.toggle("nomag", !d.magnify);
+    }
+  };
+
+  /** Everything at once — used after applying a saved look. */
+  glass.applyAll = function () {
+    glass.applyTheme();
+    glass.apply();
+    glass.applyWallpaper();
+    glass.applyMotion();
+    glass.applyDock();
+    glass.redress();
   };
 
   /* ── refraction band ──────────────────────────────────────────

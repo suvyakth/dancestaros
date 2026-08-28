@@ -94,16 +94,96 @@ straight lines are what make refraction legible.
 |-----|--------------|
 | **Finder** | Browses the virtual file system. Grid/list views, breadcrumbs, history, new/rename/duplicate/delete. |
 | **Notes** | Editor over `/Users/you/Notes`. Autosaves into the shared file system. |
-| **Terminal** | A real shell: `ls cd cat tree mkdir touch write rm mv open apps theme glass echo neofetch`. Tab completion and history. |
+| **Terminal** | A 41-command shell with a built-in `tutorial`, tab completion, history, and `define` for inventing your own commands. |
 | **Calculator** | 19 transparent buttons on one transparent pane — the hardest contrast problem in the project. |
-| **Settings** | Appearance, Glass (the live optics), Desktop, Storage. |
+| **Settings** | Appearance, Wallpaper studio, Glass, Looks, Widgets, Desktop, Storage. |
 | **Music** | An ambient generator. No audio files: each track is a chord of Web Audio oscillators through a sweeping low-pass filter. The level meter is driven by a real `AnalyserNode`. |
 | **Photos** | Image browser. The "images" are CSS gradients, which gives the glass viewer frame saturated colour to refract. |
+| **Clock** | World clocks, alarms, stopwatch, countdown timer. |
+| **Focus** | Flowmodoro and Pomodoro over one shared engine. |
 | **About** | Live frame rate, glass-surface count, and a breakdown of the five layers. |
 
 The file system is shared, which is what makes this feel like an OS rather than
 a page of unrelated widgets: write a note in **Notes**, then `cat` it in
 **Terminal**, then rename it in **Finder**.
+
+---
+
+## Flowmodoro
+
+Pomodoro forces work into 25-minute boxes. Flowmodoro does the opposite:
+the timer counts **up** for as long as the work actually lasts, and the
+break you have earned is that time divided by a ratio. At the default
+1:5, fifty minutes of focus buys ten minutes off, clamped to a floor and
+a ceiling so a two-minute session cannot earn a break and a four-hour one
+cannot earn an hour.
+
+Both modes live in `js/core/focus.js`, deliberately outside any window,
+because the timer has to survive the Focus app being closed. The app and
+the desktop widget are two subscribers to one clock, so they can never
+disagree. Sessions are logged for a fortnight and drawn as a seven-day
+chart.
+
+Alarms work the same way: the daemon is in `js/core/time.js`, so they
+ring with the Clock app closed. Every sound in the OS is synthesised
+with oscillators - there are still no audio files anywhere in this
+project.
+
+---
+
+## Widgets
+
+Panes of glass that live on the desktop rather than in a window: no title
+bar, draggable, positions remembered. Add them from the desktop
+right-click menu, Settings > Widgets, or the launcher.
+
+| Widget | Shows |
+|--------|-------|
+| **Clock** | Time, date, and the next alarm with a countdown. |
+| **Calendar** | The current month, today marked. |
+| **Focus** | A ring, the running time, and start/break - the Flowmodoro engine without the app. |
+| **Sticky note** | A scrap of glass you can write on. |
+| **System** | Frame rate, open windows, live count of glass surfaces, storage used. |
+| **Now playing** | Whatever Music is doing, with a play button. |
+
+Each one is a *view* onto state the system already owns, never a second
+copy of it. The widget layer is pointer-transparent, so the desktop
+underneath still takes clicks and context menus.
+
+---
+
+## Making it yours
+
+| Where | What |
+|-------|------|
+| **Setup wizard** | Name, bead, theme, accent, glass preset - on first run, replayable any time. |
+| **Appearance** | Five themes, accent hue, avatar bead. |
+| **Wallpaper studio** | Build a background from scratch: base colour, five orb colours, size, softness, intensity, drift speed, grid. Randomise and Monochrome generators. |
+| **Glass** | Eight optical sliders, five presets, true-refraction toggle. |
+| **Looks** | Save theme + accent + all eight optics + wallpaper as one named set. Switch between them in a click. Export to JSON, import on another machine. |
+| **Widgets** | Add, place, remove. |
+| **Desktop** | Click-away behaviour, motion level, dock position/size/magnification/auto-hide, which apps appear in the dock. |
+
+Everything is also reachable from the shell: `theme`, `accent`, `glass`,
+`preset`.
+
+### Window behaviour
+
+Clicking away can tuck the active window out of the way - three settings
+in Settings > Desktop:
+
+- **Off** - windows stay where they are
+- **Clicking the desktop** *(default)* - clicking empty space minimises the active window
+- **Losing focus** - stricter: only one window is ever open at a time
+
+Dialogs and anything that is a real surface are excluded, so only a click
+on genuinely nothing counts as clicking away.
+
+### Motion
+
+**Full**, **Reduced** (short window animations, frozen wallpaper) or
+**Off** (no transitions anywhere). `prefers-reduced-motion` is respected
+independently.
 
 ---
 
@@ -131,18 +211,27 @@ css/
   base.css          reset, design tokens, 5 themes, wallpaper, boot
   glass.css         THE GLASS SYSTEM — every control derives from here
   window.css        window chrome, traffic lights, snapping
-  desktop.css       menu bar, dock, launcher, menus, notifications
+  desktop.css       menu bar, dock (3 positions), launcher, menus, toasts
   apps.css          per-app styling
+  timers.css        Clock and Focus, plus the studio controls
+  widgets.css       desktop widgets
+  setup.css         setup wizard and greeting screen
 js/
   core/
-    util.js         hyperscript + 50-icon line-art set
+    util.js         hyperscript + 50-icon line-art set, avatar presets
     store.js        persisted state (one localStorage key)
-    glass.js        optical runtime: tokens, refraction, sheen, perf mode
+    glass.js        optical runtime: tokens, accent, presets, wallpaper,
+                    refraction, sheen, dock geometry, perf mode
     fs.js           virtual file system
+    time.js         synthesised chimes + the alarm daemon
+    focus.js        the Flowmodoro / Pomodoro engine
     ui.js           menus, dialogs, toasts, glass control factories
     wm.js           app registry + window manager
-  apps/*.js         one file per app
+    widgets.js      desktop widget system
+  apps/*.js         one file per app; settings-panes.js adds the deep
+                    customisation panes via DS.settingsPanes
   shell.js          menu bar, dock, launcher, shortcuts, file router
+  setup.js          setup wizard + greeting screen
   boot.js           startup
 ```
 
@@ -164,6 +253,29 @@ DS.apps.register({
 
 Add the file to `index.html` and the id to `dockApps` in `js/core/store.js`.
 It inherits the entire glass material for free.
+
+## Adding a widget
+
+```js
+DS.widgets.TYPES.ping = {
+  label: "Ping", icon: "wifi", desc: "Shows a number.",
+  w: 200, h: 100,
+  build: function (el, api) { el.appendChild(DS.h("div.wg-time", { text: "0" })); },
+  tick:  function (el) { el.children[0].textContent = Math.round(Math.random() * 99); }
+};
+```
+
+`tick` runs once a second for every mounted widget. Add a `destroy` if
+you hold a subscription or an animation frame.
+
+## Adding a settings pane
+
+```js
+DS.settingsPanes.push({
+  id: "mine", label: "Mine", icon: "star", after: "desktop",
+  build: function (host, ctx) { host.appendChild(DS.h("h2.st-h", { text: "Mine" })); }
+});
+```
 
 ---
 

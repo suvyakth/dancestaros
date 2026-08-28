@@ -427,3 +427,69 @@
 .dlg h3 { margin: 0 0 6px; font-size: 15px; font-weight: 600; }
 .dlg p { margin: 0 0 16px; font-size: 12.5px; color: var(--text-2); line-height: 1.55; }
 .dlg .row { display: flex; gap: 8px; justify-content: flex-end; }
+
+
+/* ═══════════════════ DOCK POSITION & BEHAVIOUR ═══════════════════
+   The dock can live on any of three edges, with magnification and
+   auto-hide as separate switches. Icon size drives --dock-h, which
+   the desktop-icon and widget layers key their insets off, so
+   nothing ever ends up parked underneath it. */
+.dk { width: var(--dk-size, 46px); height: var(--dk-size, 46px); }
+
+.dock-wrap[data-pos="left"], .dock-wrap[data-pos="right"] {
+  top: var(--menubar-h); bottom: 0;
+  left: auto; right: auto;
+  align-items: center;
+  width: auto;
+}
+.dock-wrap[data-pos="left"]  { left: 12px; }
+.dock-wrap[data-pos="right"] { right: 12px; }
+
+.dock[data-pos="left"], .dock[data-pos="right"] {
+  flex-direction: column;
+  align-items: center;
+  height: auto;
+  width: var(--dock-h);
+  padding: 10px 8px;
+}
+.dock[data-pos="left"] .dock-sep,
+.dock[data-pos="right"] .dock-sep {
+  width: 34px; height: 1px; margin: 3px 0;
+  background: linear-gradient(90deg, transparent, rgb(var(--edge-hi) / .3), transparent);
+}
+.dock[data-pos="left"]  .dk:hover { transform: translateX(9px) scale(1.14); }
+.dock[data-pos="right"] .dk:hover { transform: translateX(-9px) scale(1.14); }
+.dock[data-pos="left"] .dk-tip {
+  bottom: auto; left: calc(100% + 14px); top: 50%;
+  transform: translateY(-50%) translateX(-4px);
+}
+.dock[data-pos="left"] .dk:hover .dk-tip { transform: translateY(-50%) translateX(0); }
+.dock[data-pos="right"] .dk-tip {
+  bottom: auto; right: calc(100% + 14px); left: auto; top: 50%;
+  transform: translateY(-50%) translateX(4px);
+}
+.dock[data-pos="right"] .dk:hover .dk-tip { transform: translateY(-50%) translateX(0); }
+.dock[data-pos="left"]  .dk-dot { bottom: auto; left: -5px; top: 50%; margin: -2px 0 0; }
+.dock[data-pos="right"] .dk-dot { bottom: auto; right: -5px; left: auto; top: 50%; margin: -2px 0 0; }
+
+/* magnification off */
+.dock.nomag .dk:hover { transform: none; }
+.dock.nomag .dk:hover + .dk,
+.dock.nomag .dk:has(+ .dk:hover) { transform: none; }
+.dock.nomag .dk:active { transform: scale(.96); }
+
+/* auto-hide — slides away until the pointer reaches that edge */
+.dock-wrap.autohide { transition: transform 340ms var(--ease), opacity 260ms linear; }
+.dock-wrap.autohide[data-pos="bottom"] { transform: translateY(calc(100% + 20px)); opacity: 0; }
+.dock-wrap.autohide[data-pos="left"]   { transform: translateX(calc(-100% - 20px)); opacity: 0; }
+.dock-wrap.autohide[data-pos="right"]  { transform: translateX(calc(100% + 20px)); opacity: 0; }
+.dock-wrap.autohide.peek { transform: none; opacity: 1; }
+
+/* the icon and widget layers step aside for a side dock */
+.desk-icons, .widgets { transition: inset 300ms var(--ease); }
+body[data-dock="left"]  .desk-icons,
+body[data-dock="left"]  .widgets { left: calc(var(--dock-h) + 26px); bottom: 14px; }
+body[data-dock="right"] .desk-icons,
+body[data-dock="right"] .widgets { right: calc(var(--dock-h) + 26px); bottom: 14px; }
+body[data-dock="hidden"] .desk-icons,
+body[data-dock="hidden"] .widgets { bottom: 14px; }

@@ -31,12 +31,57 @@
 
     /* user-defined shell commands: { name: "body" } */
     customCmds: {},
-    dockApps: ["finder", "notes", "terminal", "calc", "music", "photos", "settings", "about"],
+
+    /* window behaviour */
+    autoMinimise: "desktop",   // "off" | "desktop" | "focus"
+    motion: "full",            // "full" | "reduced" | "off"
+
+    /* dock */
+    dock: { size: 46, position: "bottom", magnify: true, autohide: false },
+
+    /* wallpaper studio — when custom is true these override the theme */
+    wallpaper: {
+      custom: false,
+      base: "#0a1424",
+      orbs: ["#22d3ee", "#a855f7", "#2563eb", "#14b8a6", "#ec4899"],
+      size: 100,     // % of the default orb diameter
+      blur: 72,
+      opacity: 62,
+      speed: 100,    // % of the default drift duration
+      grid: 16       // grid opacity, 0 = off
+    },
+
+    /* saved looks: { name: {theme, accentHue, glass, wallpaper} } */
+    looks: {},
+
+    /* desktop widgets: [{ id, type, x, y, data }] */
+    widgets: [],
+
+    /* clock app */
+    clock: {
+      alarms: [],              // { id, h, m, label, on, days:[0-6] | null, lastFired }
+      zones: ["local", "America/New_York", "Europe/London", "Asia/Kolkata", "Asia/Tokyo"]
+    },
+
+    /* focus timer */
+    focus: {
+      mode: "flow",            // "flow" | "pomodoro"
+      ratio: 5,                // flowmodoro: break = focus / ratio
+      minBreak: 3,             // minutes, floor for a flow break
+      maxBreak: 30,
+      pomo: { work: 25, short: 5, long: 15, cycles: 4 },
+      chime: true,
+      sessions: []             // { start, ms, mode }
+    },
+    dockApps: ["finder", "notes", "terminal", "focus", "clock", "calc",
+               "music", "photos", "settings", "about"],
     user: "you",
     fs: null,
     volume: 65,
     lastOpened: []
   };
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   function deepMerge(base, over) {
     var out = {};
@@ -70,7 +115,7 @@
       if (raw) {
         try { parsed = JSON.parse(raw); } catch (e) { parsed = null; }
       }
-      store.data = deepMerge(DEFAULTS, parsed || {});
+      store.data = deepMerge(clone(DEFAULTS), parsed || {});
       return store.data;
     },
 
@@ -117,7 +162,7 @@
 
     reset: function () {
       try { localStorage.removeItem(KEY); } catch (e) {}
-      store.data = deepMerge(DEFAULTS, {});
+      store.data = deepMerge(clone(DEFAULTS), {});
     },
 
     defaults: DEFAULTS

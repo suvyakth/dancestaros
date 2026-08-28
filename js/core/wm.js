@@ -53,6 +53,18 @@
 
   wm.focus = function (win) {
     if (focused === win && win.classList.contains("focused")) return;
+
+    // "Minimise on focus loss": the window you leave gets out of the way.
+    // Deliberately skipped while a dialog is up, and never applied to a
+    // window that is already on its way out.
+    var prev = focused;
+    if (prev && prev !== win &&
+        DS.store.get("autoMinimise") === "focus" &&
+        !prev._minimized && !prev.classList.contains("closing") &&
+        !DS.qs(".dlg-veil")) {
+      wm.minimize(prev);
+    }
+
     wins.forEach(function (w) { w.classList.remove("focused"); });
     win.classList.add("focused");
     zTop += 1;
@@ -408,6 +420,11 @@
     DS.qsa(".dk").forEach(function (d) {
       d.classList.toggle("running", !!running[d.dataset.app]);
     });
+  };
+
+  /** Minimise whatever is focused. Used by click-away on the desktop. */
+  wm.minimiseFocused = function () {
+    if (focused && !focused._minimized) wm.minimize(focused);
   };
 
   /** Cycle focus (Alt+Tab). */
