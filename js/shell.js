@@ -147,10 +147,8 @@
           DS.store.set("setupDone", false);
           location.reload();
         } },
-      { label: "Lock the screen", icon: "lock", action: function () {
-          DS.qs("#desktop").hidden = true;
-          DS.landing.lock(function () { DS.qs("#desktop").hidden = false; });
-        } }
+      { label: "Lock the screen", icon: "lock", kbd: "Ctrl L",
+        action: function () { shell.lockScreen(); } }
     ]);
   }
 
@@ -254,6 +252,38 @@
     if (ccOpen.parentNode) ccOpen.parentNode.removeChild(ccOpen);
     ccOpen = null;
     DS.qs("#mb-glass").classList.remove("on");
+  }
+
+  /* ───────────────────── LOCKING ─────────────────────
+     Locking drops every per-session passcode grant, so a guarded app
+     asks again after the screen comes back. */
+  var locked = false;
+
+  shell.lockScreen = function () {
+    if (locked) return;
+    locked = true;
+    DS.ui.closeMenus();
+    DS.lock.revokeAll();
+    DS.qs("#desktop").hidden = true;
+    DS.landing.lock(function () {
+      DS.qs("#desktop").hidden = false;
+      locked = false;
+      idleSince = Date.now();
+    });
+  };
+
+  /* auto-lock on idle, when the user has asked for it */
+  var idleSince = Date.now();
+  function wireIdle() {
+    ["pointerdown", "keydown", "wheel"].forEach(function (ev) {
+      window.addEventListener(ev, function () { idleSince = Date.now(); },
+        { passive: true, capture: true });
+    });
+    setInterval(function () {
+      var mins = DS.store.get("lock.autoLockMin", 0);
+      if (!mins || locked || !DS.lock.isSet()) return;
+      if (Date.now() - idleSince >= mins * 60000) shell.lockScreen();
+    }, 15000);
   }
 
   /* ───────────────────── DOCK ───────────────────── */
@@ -546,6 +576,11 @@
       run: function () { DS.widgets.clear(); }
     });
     acts.push({
+      kind: "action", icon: "lock", title: "Lock the screen",
+      sub: DS.lock.isSet() ? "Passcode required to return" : "No passcode set yet",
+      run: function () { shell.lockScreen(); }
+    });
+    acts.push({
       kind: "action", icon: "x", title: "Close all windows",
       sub: DS.wm.list().length + " open",
       run: function () { DS.wm.list().forEach(function (w) { DS.wm.close(w); }); }
@@ -680,9 +715,40 @@
         if (fm) { e.preventDefault(); DS.wm.minimize(fm); }
         return;
       }
+      if (mod && (e.key === "l" || e.key === "L")) {
+        e.preventDefault();
+        shell.lockScreen();
+        return;
+      }
       if (e.key === "Tab" && e.altKey) {
         e.preventDefault();
         DS.wm.cycle();
+      }
+    });
+
+    /* Escape is bound on `window`, not `document`, and that is
+       deliberate. Apps register their Escape handlers on document, and
+       bubble-phase document listeners fire before bubble-phase window
+       listeners — so the Photos viewer gets to close itself and call
+       preventDefault() before we would otherwise minimise the window
+       out from under it. */
+    window.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (lch.open) return;                       // the launcher owns it
+      if (DS.qs(".dlg-veil")) return;             // so does a dialog
+
+      // an open menu is the nearest thing to dismiss
+      if (DS.qs("#menu-pop:not([hidden])") || DS.qs("#ctxmenu:not([hidden])") ||
+          DS.qs(".cc")) {
+        DS.ui.closeMenus();
+        return;
+      }
+
+      if (!DS.store.get("escMinimise", true)) return;
+      var f = DS.wm.focused();
+      if (f && !f._minimized) {
+        e.preventDefault();
+        DS.wm.minimize(f);
       }
     });
   }
@@ -699,6 +765,7 @@
     wireLauncher();
     wireKeys();
     wireDrop();
+    wireIdle();
     shell.buildDock();
     shell.buildDesktopIcons();
     shell.paintAvatar();

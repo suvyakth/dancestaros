@@ -31,7 +31,7 @@ html, body { height: 100%; margin: 0; padding: 0; }
   /* ── type ──────────────────────────────────────────────────── */
   --text:     rgb(255 255 255 / .95);
   --text-2:   rgb(255 255 255 / .68);
-  --text-3:   rgb(255 255 255 / .42);
+  --text-3:   rgb(255 255 255 / .54);
   --accent:   192 100% 66%;
   --accent-2: 282 90% 74%;
   --danger:   358 88% 66%;
@@ -88,7 +88,7 @@ html, body { height: 100%; margin: 0; padding: 0; }
   --g-alpha: .42; --g-blur: 24px; --g-sat: 150%; --g-bright: 1.14; --g-thick: 1.1px;
   --text:   rgb(15 23 42 / .92);
   --text-2: rgb(15 23 42 / .62);
-  --text-3: rgb(15 23 42 / .38);
+  --text-3: rgb(15 23 42 / .50);
   --edge-hi: 255 255 255; --edge-lo: 30 41 59;
   --refract-cool: 90 160 255; --refract-warm: 255 140 90;
   --accent: 222 88% 56%;

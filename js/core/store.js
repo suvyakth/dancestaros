@@ -34,6 +34,17 @@
 
     /* window behaviour */
     autoMinimise: "desktop",   // "off" | "desktop" | "focus"
+    escMinimise: true,         // Escape tucks the focused window away
+
+    /* passcode. A privacy screen, not security - see js/core/lock.js */
+    lock: {
+      hash: null,              // salted SHA-256, never the passcode itself
+      salt: null,
+      len: 4,
+      onLock: true,            // ask on the greeting screen
+      onSettings: false,       // ask before opening Settings
+      autoLockMin: 0           // 0 = never lock on idle
+    },
     motion: "full",            // "full" | "reduced" | "off"
 
     /* dock */

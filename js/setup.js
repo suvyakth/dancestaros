@@ -406,17 +406,36 @@
       ])
     ]);
 
-    var enter = h("button.g-btn.g-btn-accent.lock-enter", {
-      html: DS.icon("power", 15) + "<span>Enter</span>"
-    });
+    var needsPin = DS.lock.requiredOnLock();
 
     root.appendChild(timeEl);
     root.appendChild(dateEl);
     root.appendChild(user);
-    root.appendChild(enter);
-    root.appendChild(h("div.lock-hint", {
-      html: "Click anywhere, or press <b>Enter</b>"
-    }));
+
+    var pad = null;
+    if (needsPin) {
+      pad = DS.lock.pad({
+        hint: "Enter your passcode",
+        onSubmit: function (pin) {
+          DS.lock.verify(pin).then(function (ok) {
+            if (ok) { unlock(); return; }
+            pad.shake();
+            pad.say("Incorrect passcode", true);
+          });
+        }
+      });
+      root.appendChild(pad.el);
+      root.appendChild(h("div.lock-hint", {
+        html: "Type the digits, or use the keypad"
+      }));
+    } else {
+      root.appendChild(h("button.g-btn.g-btn-accent.lock-enter", {
+        html: DS.icon("power", 15) + "<span>Enter</span>"
+      }));
+      root.appendChild(h("div.lock-hint", {
+        html: "Click anywhere, or press <b>Enter</b>"
+      }));
+    }
     root.appendChild(tipEl);
 
     /* rotate a tip every few seconds */
@@ -440,7 +459,8 @@
       gone = true;
       clearInterval(clock);
       clearInterval(tips);
-      document.removeEventListener("keydown", onKey);
+      if (pad) pad.unbindKeys();
+      else document.removeEventListener("keydown", onKey);
       dismiss(root, done);
     }
     function onKey(e) {
@@ -449,8 +469,14 @@
         unlock();
       }
     }
-    root.addEventListener("click", unlock);
-    document.addEventListener("keydown", onKey);
+
+    if (pad) {
+      // no click-anywhere escape hatch when a passcode is set
+      pad.bindKeys();
+    } else {
+      root.addEventListener("click", unlock);
+      document.addEventListener("keydown", onKey);
+    }
   };
 
   landing.TIPS = TIPS;

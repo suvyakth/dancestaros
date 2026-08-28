@@ -246,6 +246,39 @@ in Settings > Desktop:
 Dialogs and anything that is a real surface are excluded, so only a click
 on genuinely nothing counts as clicking away.
 
+**Escape** does the same thing, and can be switched off separately. It is
+bound on `window` rather than `document`, which matters: apps register
+their Escape handlers on `document`, and bubble-phase document listeners
+fire before bubble-phase window listeners. So the Photos viewer closes
+itself and calls `preventDefault()` before the shell would otherwise
+minimise the window out from under it. Menus, dialogs and the launcher
+all get first refusal on the key too.
+
+---
+
+## Passcode
+
+Settings > Lock sets a 4-8 digit passcode, with a glass keypad shared by
+the greeting screen and the in-place challenge dialog.
+
+| Setting | Effect |
+|---------|--------|
+| Ask on the greeting screen | The lock screen needs the code, not just a click |
+| Ask before opening Settings | Once per unlocked session, then remembered |
+| Auto-lock after idle | 5-60 minutes, or never |
+
+`Ctrl+L` locks immediately. Locking drops every session grant, so a
+guarded app asks again when you come back.
+
+**Read this before trusting it.** This is a privacy screen, not
+security. Everything runs in the page, and the whole OS lives in browser
+storage that anyone at this keyboard can open DevTools and clear. It will
+stop someone glancing at your desktop. It will not stop someone who wants
+in, and no browser page can. The one thing it does do properly is never
+store the passcode: a random salt plus SHA-256 goes into localStorage, so
+the digits are not sitting there in plain text. The same warning is
+printed in the Lock pane itself.
+
 ### Motion
 
 **Full**, **Reduced** (short window animations, frozen wallpaper) or
@@ -291,6 +324,7 @@ js/
     glass.js        optical runtime: tokens, accent, presets, wallpaper,
                     refraction, sheen, dock geometry, perf mode
     fs.js           virtual file system (media-aware)
+    lock.js         passcode hashing, the keypad, the challenge dialog
     media.js        IndexedDB blob store, import, export, quota
     time.js         synthesised chimes + the alarm daemon
     focus.js        the Flowmodoro / Pomodoro engine

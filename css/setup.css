@@ -397,3 +397,113 @@
   .land-title { font-size: 26px; }
   .land-avgrid { grid-template-columns: repeat(5, 1fr); }
 }
+
+
+/* ═══════════════════ PASSCODE KEYPAD ═══════════════════
+   One component, used by the greeting screen and by the Settings
+   challenge, so entering a passcode looks the same everywhere. */
+.pin { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.pin.shake { animation: pinShake 420ms var(--ease); }
+@keyframes pinShake {
+  10%, 90% { transform: translateX(-3px); }
+  20%, 80% { transform: translateX(5px); }
+  30%, 50%, 70% { transform: translateX(-8px); }
+  40%, 60% { transform: translateX(8px); }
+}
+
+.pin-dots { display: flex; gap: 13px; height: 15px; align-items: center; }
+.pin-dots i {
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: rgb(var(--edge-hi) / .12);
+  box-shadow: inset 0 1px 3px rgb(var(--edge-lo) / .35),
+              inset 0 0 0 .5px rgb(var(--edge-hi) / .3);
+  transition: all 200ms var(--ease-back);
+}
+.pin-dots i.on {
+  background: linear-gradient(150deg, hsl(var(--accent) / .95), hsl(var(--accent-2) / .7));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / .5),
+    0 0 12px -1px hsl(var(--accent) / .8);
+  transform: scale(1.12);
+}
+
+.pin-msg {
+  font-size: 11.5px;
+  color: var(--text-3);
+  min-height: 16px;
+  text-align: center;
+  transition: color 200ms linear;
+}
+.pin-msg.bad { color: hsl(var(--danger) / 1); }
+
+.pin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 64px);
+  gap: 10px;
+}
+.pin-key {
+  position: relative;
+  isolation: isolate;
+  height: 52px;
+  border-radius: 15px;
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(158deg,
+    rgb(var(--g-tint) / calc(var(--g-alpha) * 2)) 0%,
+    rgb(var(--g-tint) / calc(var(--g-alpha) * .5)) 55%,
+    rgb(var(--g-tint) / calc(var(--g-alpha) * 1.4)) 100%);
+  backdrop-filter: blur(12px) saturate(170%) brightness(1.07);
+  -webkit-backdrop-filter: blur(12px) saturate(170%) brightness(1.07);
+  box-shadow:
+    inset 0 1.5px 8px -4px rgb(var(--refract-cool) / calc(var(--g-disperse) * .95)),
+    inset 0 -1.5px 8px -4px rgb(var(--refract-warm) / calc(var(--g-disperse) * .7)),
+    inset 0 1px 0 rgb(var(--edge-hi) / .34),
+    0 0 0 .5px rgb(var(--edge-hi) / .14),
+    0 3px 10px -5px rgb(var(--edge-lo) / .45);
+  transition: transform 120ms var(--ease), box-shadow 160ms var(--ease);
+}
+.pin-key::after {
+  content: "";
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(70px 44px at var(--mx, 50%) var(--my, 0%),
+    rgb(var(--edge-hi) / .22), transparent 72%);
+  opacity: 0;
+  transition: opacity 180ms linear;
+}
+.pin-key:hover::after { opacity: 1; }
+.pin-key:hover { transform: translateY(-1px); }
+.pin-key:active {
+  transform: scale(.94);
+  box-shadow:
+    inset 0 2px 8px -2px rgb(var(--edge-lo) / .34),
+    inset 0 1px 0 rgb(var(--edge-hi) / .2);
+}
+.pin-aux { font-size: 12px; color: var(--text-2); }
+.pin-aux svg { margin: 0 auto; }
+
+.pin-dlg { width: min(320px, 90vw); }
+.pin-dlg .pin { margin-top: 4px; }
+
+/* the greeting screen variant sits a little lower and wider */
+.lock .pin { margin-top: 26px; animation: lockUp 760ms 200ms var(--ease-back) backwards; }
+.lock .pin-grid { grid-template-columns: repeat(3, 70px); }
+
+
+/* the honesty notice on the Lock pane */
+.lk-warn {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  margin-top: 6px;
+}
+.lk-warn > span { flex: none; color: hsl(var(--accent) / 1); display: flex; padding-top: 1px; }
+.lk-warn b { font-size: 12.5px; font-weight: 600; display: block; }
+.lk-warn p {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-2);
+}

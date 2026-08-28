@@ -174,21 +174,46 @@
   font: 400 12.5px/1.62 ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
   user-select: text;
   cursor: text;
+
+  /* A terminal is dense monospace at 12.5px, and the wallpaper drifts
+     bright colour underneath it. Low-alpha text over pure glass was not
+     survivable. The pane gets a recessed well - still translucent, the
+     wallpaper still moves through it, but the text now has a consistent
+     ground instead of whatever colour happens to be behind it. */
+  background: linear-gradient(rgb(var(--edge-lo) / .20), rgb(var(--edge-lo) / .27));
+  box-shadow:
+    inset 0 2px 12px rgb(var(--edge-lo) / .30),
+    inset 0 0 0 .5px rgb(var(--edge-hi) / .07);
+
+  /* per-pane text tiers, so the light theme flips correctly */
+  --tm-fg:   rgb(255 255 255 / .96);
+  --tm-mid:  rgb(255 255 255 / .78);
+  --tm-dim:  rgb(255 255 255 / .60);
 }
+[data-theme="lumen"] .tm-pane {
+  background: linear-gradient(rgb(15 23 42 / .06), rgb(15 23 42 / .10));
+  --tm-fg:   rgb(15 23 42 / .95);
+  --tm-mid:  rgb(15 23 42 / .76);
+  --tm-dim:  rgb(15 23 42 / .58);
+}
+
 .tm-out { display: block; }
 .tm-line {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
   font: inherit;
-  color: var(--text);
+  color: var(--tm-fg);
+  text-shadow: 0 1px 2px rgb(0 0 0 / .35);
 }
-.tm-line.err  { color: hsl(var(--danger) / .95); }
-.tm-line.ok   { color: hsl(var(--ok) / .95); }
-.tm-line.dim  { color: var(--text-3); }
-.tm-line.dir  { color: hsl(var(--accent) / 1); }
-.tm-line.echo { color: var(--text-2); }
-.tm-pre { color: hsl(var(--accent-2) / .9); }
+[data-theme="lumen"] .tm-line { text-shadow: 0 1px 2px rgb(255 255 255 / .5); }
+
+.tm-line.err  { color: hsl(var(--danger) / 1); }
+.tm-line.ok   { color: hsl(var(--ok) / 1); }
+.tm-line.dim  { color: var(--tm-dim); }
+.tm-line.dir  { color: hsl(var(--accent) / 1); font-weight: 500; }
+.tm-line.echo { color: var(--tm-mid); }
+.tm-pre { color: hsl(var(--accent-2) / 1); }
 
 .tm-row { display: flex; align-items: baseline; gap: 0; }
 .tm-prompt { flex: none; white-space: pre; }
@@ -202,10 +227,16 @@
   outline: 0;
   background: transparent;
   font: inherit;
-  color: var(--text);
+  color: var(--tm-fg);
   caret-color: hsl(var(--accent) / 1);
+  text-shadow: 0 1px 2px rgb(0 0 0 / .35);
   user-select: text;
 }
+[data-theme="lumen"] .tm-input { text-shadow: 0 1px 2px rgb(255 255 255 / .5); }
+
+.tm-prompt { text-shadow: 0 1px 2px rgb(0 0 0 / .4); }
+[data-theme="lumen"] .tm-prompt { text-shadow: 0 1px 2px rgb(255 255 255 / .5); }
+.tm-prompt u { color: var(--tm-mid); }
 
 /* ───────────────────── CALCULATOR ───────────────────── */
 .ca-pane {

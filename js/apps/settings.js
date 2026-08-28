@@ -346,6 +346,15 @@
         ));
 
         host.appendChild(DS.ui.row(
+          "Escape minimises",
+          "Pressing Escape tucks the focused window away. Menus, dialogs and " +
+          "the launcher get first refusal on the key.",
+          DS.ui.toggle(DS.store.get("escMinimise", true), function (v) {
+            DS.store.set("escMinimise", v);
+          })
+        ));
+
+        host.appendChild(DS.ui.row(
           "Motion",
           "Reduced shortens window animations and freezes the wallpaper. " +
           "Off removes every transition in the system.",

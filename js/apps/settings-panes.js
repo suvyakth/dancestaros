@@ -333,6 +333,153 @@
     }
   });
 
+  /* ═══════════════════ LOCK ═══════════════════ */
+  DS.settingsPanes.push({
+    id: "lock",
+    label: "Lock",
+    icon: "lock",
+    after: "widgets",
+    build: function (host, ctx) {
+      var isSet = DS.lock.isSet();
+
+      host.appendChild(h("h2.st-h", { text: "Passcode" }));
+      host.appendChild(h("p.st-sub", {
+        text: "A passcode for the greeting screen, and optionally for Settings " +
+              "itself. Digits only, four to eight of them."
+      }));
+
+      /* Say plainly what this is, because the alternative is implying
+         a guarantee the browser cannot make. */
+      host.appendChild(h("div.g-card.lk-warn", {}, [
+        h("span", { html: DS.icon("info", 16) }),
+        h("div", {}, [
+          h("b", { text: "This is a privacy screen, not security." }),
+          h("p", {
+            text: "Everything here runs in the page, and the whole OS lives in " +
+                  "browser storage that anyone at this keyboard can open DevTools " +
+                  "and clear. It will stop someone glancing at your desktop. It " +
+                  "will not stop someone who wants in. The passcode itself is " +
+                  "never stored — only a salted SHA-256 of it."
+          })
+        ])
+      ]));
+
+      host.appendChild(DS.ui.section(isSet ? "Passcode is set" : "No passcode"));
+
+      if (!isSet) {
+        var first = null;
+        var setPad = DS.lock.pad({
+          hint: "Choose a passcode",
+          length: 4,
+          onSubmit: function (pin, api) {
+            if (!first) {
+              first = pin;
+              api.say("Enter it again to confirm");
+              return;
+            }
+            if (pin !== first) {
+              first = null;
+              api.shake();
+              api.say("They did not match. Start again.", true);
+              return;
+            }
+            DS.lock.set(pin).then(function () {
+              DS.ui.toast({
+                icon: "lock", title: "Passcode set",
+                body: "The greeting screen will ask for it from now on."
+              });
+              ctx.render();
+            });
+          }
+        });
+        host.appendChild(setPad.el);
+        host.appendChild(h("p.st-hint", {
+          style: { "text-align": "center" },
+          text: "Four digits. You will be asked to repeat them. " +
+                "Type them or use the keypad."
+        }));
+        setTimeout(function () { setPad.el.focus(); }, 60);
+      } else {
+        host.appendChild(h("div", {
+          style: { display: "flex", gap: "8px", "flex-wrap": "wrap" }
+        }, [
+          h("button.g-btn", {
+            html: DS.icon("refresh", 14) + "<span>Change passcode</span>",
+            onclick: function () {
+              DS.lock.challenge({
+                title: "Change passcode",
+                body: "Confirm the current one first."
+              }).then(function (ok) {
+                if (!ok) return;
+                DS.lock.clear();
+                ctx.render();
+                DS.ui.toast({
+                  icon: "lock", title: "Cleared",
+                  body: "Choose a new passcode below."
+                });
+              });
+            }
+          }),
+          h("button.g-btn.g-btn-danger", {
+            html: DS.icon("trash", 14) + "<span>Remove passcode</span>",
+            onclick: function () {
+              DS.lock.challenge({
+                title: "Remove passcode",
+                body: "Confirm the current one to switch it off."
+              }).then(function (ok) {
+                if (!ok) return;
+                DS.lock.clear();
+                ctx.render();
+                DS.ui.toast({ icon: "lock", title: "Passcode removed" });
+              });
+            }
+          }),
+          h("button.g-btn", {
+            html: DS.icon("eye", 14) + "<span>Test it</span>",
+            onclick: function () {
+              DS.lock.challenge({ title: "Test", body: "Just checking it works." })
+                .then(function (ok) {
+                  DS.ui.toast({
+                    icon: ok ? "check" : "info",
+                    title: ok ? "That is the one" : "Not matched"
+                  });
+                });
+            }
+          })
+        ]));
+
+        host.appendChild(DS.ui.section("Where it applies"));
+        host.appendChild(DS.ui.row(
+          "Ask on the greeting screen",
+          "Off means the greeting screen goes back to click-anywhere.",
+          DS.ui.toggle(DS.store.get("lock.onLock", true), function (v) {
+            DS.store.set("lock.onLock", v);
+          })
+        ));
+        host.appendChild(DS.ui.row(
+          "Ask before opening Settings",
+          "Asked once per unlocked session, then remembered until the screen locks.",
+          DS.ui.toggle(DS.store.get("lock.onSettings", false), function (v) {
+            DS.store.set("lock.onSettings", v);
+            DS.lock.revokeAll();
+          })
+        ));
+
+        host.appendChild(DS.ui.section("Auto-lock"));
+        host.appendChild(DS.ui.sliderRow({
+          label: "After idle", min: 0, max: 60, step: 5,
+          value: DS.store.get("lock.autoLockMin", 0),
+          format: function (v) { return v ? v + " min" : "Never"; },
+          onInput: function (v) { DS.store.set("lock.autoLockMin", v); }
+        }));
+        host.appendChild(h("div.st-hint", {
+          text: "Locks the screen after this long with no pointer or keyboard " +
+                "activity. Ctrl+L locks it immediately."
+        }));
+      }
+    }
+  });
+
   /* ═══════════════════ WIDGETS ═══════════════════ */
   DS.settingsPanes.push({
     id: "widgets",

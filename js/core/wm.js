@@ -83,6 +83,12 @@
     var app = registry[appId];
     if (!app) { DS.ui.toast({ icon: "info", title: "No such app", body: appId }); return null; }
 
+    // Some apps sit behind the passcode. Ask once per unlocked session.
+    if (DS.lock && DS.lock.guards(appId) && !DS.lock.isGranted(appId)) {
+      DS.lock.open(appId).then(function (ok) { if (ok) wm.open(appId, arg); });
+      return null;
+    }
+
     // Single-instance apps just come forward.
     if (app.single !== false) {
       var existing = wins.filter(function (w) { return w._app.id === appId; })[0];
