@@ -44,6 +44,35 @@ Layer 3 is the whole argument of this project. Open **Settings › Glass** and d
 property stays identical. There is a **Make it plastic** button that kills
 layers 3, 4 and 5 at once for a side-by-side comparison.
 
+### Beyond the five layers
+
+Five layers get you glass. These four are what stop it reading as a
+stack of independent frosted rectangles:
+
+**One light for the whole desktop.** `DS.glass.relight()` writes each
+pane's offset to a single shared light source, so a window on the left
+of the screen is lit on its right edge and one on the right is lit on
+its left. The rims disagree with each other in exactly the way real rims
+would. Move the light in Settings > Glass, or let it drift and watch
+every rim in the system breathe together.
+
+**Surface finish.** Real glass is rarely flat. Six finishes — smooth,
+reeded, fluted, cathedral, bubbled, frosted — add relief to every pane,
+and where the browser supports a filter reference inside
+`backdrop-filter`, actually displace what shows through. Reeded is the
+one to try first; it looks nothing like any desktop you have used.
+
+**Stacked depth.** A window buried three deep is being seen through more
+glass, so it diffuses more and holds less colour. The window manager
+writes each pane's stack index and the CSS scales blur and saturation
+off it — which doubles as the depth cue that total transparency
+otherwise throws away.
+
+**Caustics and shatter.** Light that passes through a pane lands
+somewhere: the focused window throws a tinted pool beneath itself. And
+closing a pane of glass breaks it — shards are flung from the window's
+own footprint, each carrying a slice of the same backdrop blur.
+
 ### Tuning it
 
 Every optical property is a live CSS custom property, exposed three ways:
@@ -102,6 +131,7 @@ straight lines are what make refraction legible.
 | **Image Lab** | Non-destructive photo editing: nine adjustments, seven looks, rotate/flip, export. |
 | **Audio Lab** | Waveform, five-band EQ, effects rack, trim, render to WAV. |
 | **Video Lab** | Trim, colour grade, speed, frame grab, export to WebM. |
+| **Calendar** | Month, week and agenda views, reminders, .ics import and export. |
 | **Clock** | World clocks, alarms, stopwatch, countdown timer. |
 | **Focus** | Flowmodoro and Pomodoro over one shared engine. |
 | **About** | Live frame rate, glass-surface count, and a breakdown of the five layers. |
@@ -287,6 +317,50 @@ independently.
 
 ---
 
+## Actions and custom shortcuts
+
+Every invocable thing in the system is a named action in one registry:
+each app, theme, glass preset, finish and widget, plus the system verbs.
+The launcher, the shortcut binder and the shell's `do` command are three
+front ends onto that same list, so they cannot drift apart. Adding an
+action makes it searchable, bindable and scriptable at once.
+
+**Settings > Shortcuts** binds any key combination to any of them. Click
+the combo box, press the keys, pick the action. Combos are normalised
+(`Ctrl+Shift+K`), Meta folds into Ctrl so a shortcut recorded on a Mac
+still fires on Windows, and the recorder warns before you shadow
+something the system already owns. Shortcuts do not fire while you are
+typing, unless the combination uses Ctrl or Alt.
+
+From the shell: `do` lists every action id, `do <id>` runs one, `keys`
+prints your bindings.
+
+---
+
+## Calendar and Google
+
+Month, week and agenda views over one event list, with colours, notes
+and reminders that ride the same daemon as the alarms — so they fire
+with the app closed.
+
+**On Google Calendar specifically.** A static page cannot do a real
+Google sync. OAuth needs a client secret and a redirect the browser
+cannot keep, and Google's iCal endpoints send no CORS headers, so
+fetching one from a page is blocked before it starts. Rather than ship a
+"Connect" button that never works, the Calendar does the part that
+genuinely does:
+
+| | |
+|---|---|
+| **Import** | Drop or pick the `.ics` Google exports — the whole calendar lands here |
+| **Export** | Writes an `.ics` that Google, Apple and Outlook all accept |
+| **From a URL** | Tries anyway, and says plainly when CORS refuses |
+
+That is real interoperability in both directions. It is just not live
+sync, and claiming otherwise would be the actual bug.
+
+---
+
 ## Shortcuts
 
 | Key | Action |
@@ -315,6 +389,8 @@ css/
   apps.css          per-app styling
   timers.css        Clock and Focus, plus the studio controls
   labs.css          the three media editors, and drop-to-import
+  optics.css        the light, finishes, depth, caustics, shatter
+  calendar.css      Calendar, and the shortcut recorder
   widgets.css       desktop widgets
   setup.css         setup wizard and greeting screen
 js/
@@ -325,6 +401,7 @@ js/
                     refraction, sheen, dock geometry, perf mode
     fs.js           virtual file system (media-aware)
     lock.js         passcode hashing, the keypad, the challenge dialog
+    actions.js      the action registry + the custom shortcut engine
     media.js        IndexedDB blob store, import, export, quota
     time.js         synthesised chimes + the alarm daemon
     focus.js        the Flowmodoro / Pomodoro engine

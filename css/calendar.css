@@ -1,0 +1,328 @@
+/* ═══════════════════════════════════════════════════════════════
+   calendar.css — Calendar
+
+   A month grid is 42 cells of thin lines, which is exactly the sort
+   of thing that disappears on glass. The grid here is drawn with
+   inset shadows rather than borders, so the lines read as scored
+   into the pane instead of painted on top of it.
+   ═══════════════════════════════════════════════════════════════ */
+
+.cal-col { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.cal-side { width: 210px; }
+.cal-main { padding: 0; display: flex; flex-direction: column; }
+
+.cal-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+/* ───────────────────── MONTH ───────────────────── */
+.cal-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: 24px repeat(6, 1fr);
+}
+.cal-dow {
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  box-shadow: inset 0 -1px 0 rgb(var(--edge-hi) / .12);
+}
+.cal-cell {
+  position: relative;
+  min-width: 0;
+  padding: 4px 5px 5px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: default;
+  /* scored, not bordered */
+  box-shadow:
+    inset -1px 0 0 rgb(var(--edge-hi) / .07),
+    inset 0 -1px 0 rgb(var(--edge-hi) / .07);
+  transition: background 160ms linear;
+}
+.cal-cell:hover { background: rgb(var(--edge-hi) / .05); }
+.cal-cell.out { opacity: .38; }
+.cal-cell.sel {
+  background: rgb(var(--edge-hi) / .09);
+  box-shadow:
+    inset 0 0 0 1.5px hsl(var(--accent) / .55),
+    inset 0 1px 12px -4px rgb(var(--refract-cool) / .6);
+}
+.cal-num {
+  font-size: 11.5px;
+  font-weight: 550;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  align-self: flex-start;
+  padding: 1px 5px;
+  border-radius: 99px;
+}
+.cal-cell.today .cal-num {
+  color: #fff;
+  background: linear-gradient(150deg, hsl(var(--accent) / .9), hsl(var(--accent-2) / .65));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .4),
+              0 0 12px -3px hsl(var(--accent) / .8);
+}
+.cal-more {
+  font-size: 9.5px;
+  color: var(--text-3);
+  padding-left: 3px;
+}
+
+/* ───────────────────── EVENT PILL ───────────────────── */
+.cal-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  cursor: default;
+  background: color-mix(in srgb, var(--ec, #22d3ee) 22%, transparent);
+  box-shadow:
+    inset 0 0 0 .5px color-mix(in srgb, var(--ec, #22d3ee) 55%, transparent),
+    inset 0 1px 5px -3px rgb(255 255 255 / .5);
+  transition: transform 140ms var(--ease), box-shadow 160ms var(--ease);
+}
+.cal-pill:hover {
+  transform: translateX(1px);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--ec, #22d3ee) 85%, transparent),
+    0 3px 10px -5px var(--ec, #22d3ee);
+}
+.cal-pill i {
+  flex: none;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--ec, #22d3ee);
+  box-shadow: 0 0 6px var(--ec, #22d3ee);
+}
+.cal-pill b {
+  flex: 1; min-width: 0;
+  font-weight: 550;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cal-pill u {
+  text-decoration: none;
+  color: var(--text-3);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ───────────────────── WEEK ───────────────────── */
+.cal-week {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+.cal-wcol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 7px;
+  overflow-y: auto;
+  box-shadow: inset -1px 0 0 rgb(var(--edge-hi) / .07);
+}
+.cal-wcol.today { background: rgb(var(--edge-hi) / .06); }
+.cal-whead {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-bottom: 6px;
+  box-shadow: inset 0 -1px 0 rgb(var(--edge-hi) / .1);
+  margin-bottom: 4px;
+}
+.cal-whead b { font-size: 10px; font-weight: 650; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--text-3); }
+.cal-whead i {
+  font-style: normal; font-size: 15px; font-weight: 300;
+  font-variant-numeric: tabular-nums;
+}
+.cal-wcol.today .cal-whead i { color: hsl(var(--accent) / 1); font-weight: 600; }
+.cal-wempty { font-size: 11px; color: var(--text-3); padding: 4px 2px; }
+
+/* ───────────────────── AGENDA ───────────────────── */
+.cal-agenda { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px; }
+.cal-arow {
+  display: flex;
+  gap: 16px;
+  padding: 10px 0;
+  box-shadow: inset 0 -1px 0 rgb(var(--edge-hi) / .08);
+}
+.cal-adate { flex: none; width: 62px; text-align: right; }
+.cal-adate b {
+  display: block; font-size: 21px; font-weight: 250;
+  letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.cal-adate i {
+  display: block; font-style: normal; font-size: 10px;
+  color: var(--text-3); text-transform: uppercase; letter-spacing: .06em;
+}
+.cal-alist { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.cal-alist .cal-pill { padding: 5px 9px; font-size: 12px; }
+
+/* ───────────────────── SIDEBAR ───────────────────── */
+.cal-selday { padding: 4px 8px 10px; }
+.cal-selday b {
+  display: block; font-size: 34px; font-weight: 200;
+  letter-spacing: -.03em; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.cal-selday i {
+  display: block; font-style: normal; font-size: 11px;
+  color: var(--text-3); margin-top: 3px;
+}
+.cal-sitem {
+  display: flex; gap: 9px; align-items: flex-start;
+  padding: 7px 8px;
+  border-radius: 9px;
+  cursor: default;
+  transition: background 150ms linear;
+}
+.cal-sitem:hover { background: rgb(var(--edge-hi) / .09); }
+.cal-sitem i {
+  flex: none; width: 4px; align-self: stretch;
+  min-height: 26px;
+  border-radius: 99px;
+  background: var(--ec, #22d3ee);
+  box-shadow: 0 0 8px -1px var(--ec, #22d3ee);
+}
+.cal-sitem b {
+  display: block; font-size: 12px; font-weight: 550;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cal-sitem u {
+  display: block; text-decoration: none; font-size: 10.5px;
+  color: var(--text-3); margin-top: 2px;
+}
+
+/* ───────────────────── EDITOR ───────────────────── */
+.cal-dlg { width: min(400px, 92vw); }
+.cal-dlg > * { position: relative; z-index: 3; }
+.cal-dlg .g-field { margin-bottom: 8px; }
+.cal-frow { display: flex; gap: 8px; }
+.cal-times { display: flex; align-items: center; gap: 8px; }
+.cal-times span { font-size: 11.5px; color: var(--text-3); flex: none; }
+.cal-swatches { display: flex; gap: 7px; }
+.cal-sw {
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .45),
+              0 0 0 .5px rgb(var(--edge-hi) / .25);
+  transition: transform 160ms var(--ease-back), box-shadow 180ms var(--ease);
+}
+.cal-sw:hover { transform: translateY(-2px) scale(1.08); }
+.cal-sw.on {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .5),
+              0 0 0 2px rgb(var(--edge-hi) / .85),
+              0 4px 12px -4px rgb(var(--edge-lo) / .5);
+}
+
+/* ───────────────────── WIDGET EVENTS ───────────────────── */
+.wg-evs {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+}
+.wg-ev {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10.5px;
+  min-width: 0;
+}
+.wg-ev i {
+  flex: none; width: 4px; height: 4px; border-radius: 50%;
+  background: var(--ec, #22d3ee);
+  box-shadow: 0 0 5px var(--ec, #22d3ee);
+}
+.wg-ev b {
+  flex: 1; min-width: 0; font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wg-ev u {
+  text-decoration: none; color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ───────────────────── SHORTCUT RECORDER ───────────────────── */
+.sc-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0;
+  box-shadow: inset 0 -1px 0 rgb(var(--edge-hi) / .08);
+}
+.sc-combo {
+  flex: none;
+  min-width: 132px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: rgb(var(--edge-lo) / .2);
+  box-shadow:
+    inset 0 1px 3px rgb(var(--edge-lo) / .3),
+    inset 0 0 0 .5px rgb(var(--edge-hi) / .22);
+}
+.sc-combo.rec {
+  color: #fff;
+  background: linear-gradient(150deg, hsl(var(--accent) / .6), hsl(var(--accent-2) / .45));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .35),
+              0 0 16px -3px hsl(var(--accent) / .8);
+  animation: recPulse 1.3s ease-in-out infinite;
+}
+@keyframes recPulse { 50% { opacity: .62; } }
+.sc-what { flex: 1; min-width: 0; font-size: 12.5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-res { font-size: 11px; color: var(--text-3); }
+
+/* a day with something on it, in the widget grid */
+.wg-cal i.busy {
+  position: relative;
+  color: var(--text);
+}
+.wg-cal i.busy::after {
+  content: "";
+  position: absolute;
+  bottom: 1px; left: 50%;
+  width: 3px; height: 3px;
+  margin-left: -1.5px;
+  border-radius: 50%;
+  background: hsl(var(--accent) / .9);
+  box-shadow: 0 0 5px hsl(var(--accent) / .9);
+}
+
+/* the action picker used by the shortcut binder */
+.sc-pick { width: min(460px, 92vw); }
+.sc-pick > * { position: relative; z-index: 3; }
+.sc-list {
+  max-height: 42vh;
+  overflow-y: auto;
+  margin-top: 10px;
+  padding-right: 2px;
+}
+.sc-list .lch-row { padding: 6px 9px; }
+.sc-list .lch-row:hover {
+  background: linear-gradient(110deg, hsl(var(--accent) / .34), hsl(var(--accent-2) / .26));
+  box-shadow: inset 0 1px 0 rgb(var(--edge-hi) / .28);
+  color: #fff;
+}
+.sc-list .lch-row:hover .lt2 i { color: rgb(255 255 255 / .7); }
+.sc-list .li { width: 26px; height: 26px; }
+.sc-list .lt2 b { font-size: 12.5px; }
+.sc-list .lt2 i { font-family: ui-monospace, Consolas, monospace; font-size: 10px; }

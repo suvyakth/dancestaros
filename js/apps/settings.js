@@ -258,6 +258,68 @@
           host.appendChild(h("div.st-hint", { text: o.hint }));
         });
 
+        /* ── surface finish ── */
+        host.appendChild(DS.ui.section("Surface finish"));
+        host.appendChild(h("p.st-hint", {
+          text: "Real glass is rarely flat. A finish adds relief to every pane, " +
+                "and where the browser allows it, actually bends what shows " +
+                "through."
+        }));
+        var fgrid = h("div.land-grid", { style: { "margin-top": "10px" } });
+        Object.keys(DS.glass.FINISHES).forEach(function (id) {
+          var f = DS.glass.FINISHES[id];
+          var on = DS.store.get("finish", "smooth") === id;
+          fgrid.appendChild(h("button.land-tile" + (on ? ".on" : ""), {
+            onclick: function () {
+              DS.store.set("finish", id);
+              DS.glass.applyFinish();
+              render();
+            }
+          }, [h("b", { text: f.label }), h("i", { text: f.desc })]));
+        });
+        host.appendChild(fgrid);
+
+        /* ── the light ── */
+        host.appendChild(DS.ui.section("The light"));
+        host.appendChild(h("p.st-hint", {
+          text: "One source for the whole desktop. Every rim and bloom points " +
+                "at it, so highlights on unrelated windows agree with each " +
+                "other instead of each pane inventing its own sun."
+        }));
+        [
+          ["light.x", "Position across", 0, 100, 1, "%"],
+          ["light.y", "Position down", -10, 100, 1, "%"],
+          ["light.strength", "Strength", 0, 160, 5, "%"],
+          ["light.caustic", "Caustic pool", 0, 130, 5, "%"]
+        ].forEach(function (r) {
+          host.appendChild(DS.ui.sliderRow({
+            label: r[1], min: r[2], max: r[3], step: r[4],
+            value: DS.store.get(r[0]),
+            format: function (v) { return v + r[5]; },
+            onInput: function (v) { DS.store.set(r[0], v); DS.glass.applyLight(); }
+          }));
+        });
+        host.appendChild(DS.ui.row("Let it drift",
+          "The light wanders slowly, so every rim in the system breathes together.",
+          DS.ui.toggle(DS.store.get("light.drift", false), function (v) {
+            DS.store.set("light.drift", v);
+          })));
+
+        /* ── depth + shatter ── */
+        host.appendChild(DS.ui.section("Behaviour"));
+        host.appendChild(DS.ui.row("Stacked depth",
+          "Panes further down the stack diffuse more and hold less colour, " +
+          "the way looking through more glass actually works.",
+          DS.ui.toggle(DS.store.get("depth", true), function (v) {
+            DS.store.set("depth", v);
+            document.documentElement.setAttribute("data-depth", v ? "on" : "off");
+          })));
+        host.appendChild(DS.ui.row("Shatter on close",
+          "Closing a pane of glass breaks it.",
+          DS.ui.toggle(DS.store.get("shatter", true), function (v) {
+            DS.store.set("shatter", v);
+          })));
+
         host.appendChild(DS.ui.section("Refraction"));
         host.appendChild(DS.ui.row(
           "True edge refraction",

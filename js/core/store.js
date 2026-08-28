@@ -23,6 +23,24 @@
     refraction: true,
     wallpaperMotion: true,
 
+    /* one light source for the whole desktop */
+    light: { x: 26, y: 8, strength: 100, caustic: 55, drift: false },
+
+    /* surface relief: smooth reeded fluted cathedral bubbled frosted */
+    finish: "smooth",
+    shatter: true,
+    depth: true,          // panes deeper in the stack blur more
+
+    /* user keyboard shortcuts: [{ id, combo, action }] */
+    shortcuts: [],
+
+    /* calendar */
+    calendar: {
+      events: [],         // { id, date, start, end, title, notes, color, allDay, remind }
+      view: "month",
+      week0: 1            // 0 = Sunday first, 1 = Monday first
+    },
+
     /* personalisation */
     setupDone: false,
     accentHue: null,        // null = follow the theme's own accent
@@ -84,8 +102,8 @@
       chime: true,
       sessions: []             // { start, ms, mode }
     },
-    dockApps: ["finder", "notes", "terminal", "focus", "clock", "calc",
-               "music", "photos", "imagelab", "audiolab", "videolab",
+    dockApps: ["finder", "notes", "calendar", "terminal", "focus", "clock",
+               "calc", "music", "photos", "imagelab", "audiolab", "videolab",
                "settings", "about"],
     user: "you",
     fs: null,

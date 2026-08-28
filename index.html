@@ -13,6 +13,8 @@
 <link rel="stylesheet" href="css/timers.css">
 <link rel="stylesheet" href="css/widgets.css">
 <link rel="stylesheet" href="css/labs.css">
+<link rel="stylesheet" href="css/optics.css">
+<link rel="stylesheet" href="css/calendar.css">
 <link rel="stylesheet" href="css/setup.css">
 </head>
 <body>
@@ -37,6 +39,32 @@
       <feColorMatrix in="SourceGraphic" result="gc" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0"/>
       <feBlend in="rc" in2="gc" mode="screen" result="rg"/>
       <feBlend in="rg" in2="bc" mode="screen"/>
+    </filter>
+
+    <!-- Reeded glass: tall thin ribs. baseFrequency is deliberately
+         lopsided so the noise stretches into vertical streaks. -->
+    <filter id="ds-reed" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
+      <feTurbulence type="turbulence" baseFrequency="0.42 0.002" numOctaves="1" seed="3" result="r"/>
+      <feDisplacementMap in="SourceGraphic" in2="r" scale="17" xChannelSelector="R" yChannelSelector="R"/>
+    </filter>
+
+    <!-- Fluted: the same idea, wider and softer. -->
+    <filter id="ds-flute" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
+      <feTurbulence type="turbulence" baseFrequency="0.16 0.001" numOctaves="1" seed="9" result="r"/>
+      <feDisplacementMap in="SourceGraphic" in2="r" scale="24" xChannelSelector="R" yChannelSelector="R"/>
+    </filter>
+
+    <!-- Cathedral: irregular hand-rolled ripple. -->
+    <filter id="ds-cathedral" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.021" numOctaves="3" seed="17" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="11" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+
+    <!-- Bubbled: fat lazy blobs. -->
+    <filter id="ds-bubble" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006" numOctaves="2" seed="23" result="n"/>
+      <feGaussianBlur in="n" stdDeviation="2" result="ns"/>
+      <feDisplacementMap in="SourceGraphic" in2="ns" scale="26" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
 
     <!-- Micro-imperfection grain. No glass is optically perfect. -->
@@ -140,6 +168,7 @@
 <script src="js/core/fs.js"></script>
 <script src="js/core/media.js"></script>
 <script src="js/core/lock.js"></script>
+<script src="js/core/actions.js"></script>
 <script src="js/core/time.js"></script>
 <script src="js/core/focus.js"></script>
 <script src="js/core/ui.js"></script>
@@ -150,6 +179,7 @@
 <script src="js/apps/terminal.js"></script>
 <script src="js/apps/calc.js"></script>
 <script src="js/apps/clock.js"></script>
+<script src="js/apps/calendar.js"></script>
 <script src="js/apps/focus.js"></script>
 <script src="js/apps/settings.js"></script>
 <script src="js/apps/settings-panes.js"></script>

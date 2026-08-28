@@ -73,6 +73,20 @@
     var label = DS.qs("#mb-appname");
     if (label) label.textContent = win._app.name;
     wm.syncDock();
+    wm.restack();
+  };
+
+  /** Write each window's index in the stack, so optics.css can make
+      buried panes diffuse more. Topmost is depth 0. */
+  wm.restack = function () {
+    var live = wins.filter(function (w) { return !w._minimized; })
+      .sort(function (a, b) {
+        return (parseInt(b.style.zIndex, 10) || 0) - (parseInt(a.style.zIndex, 10) || 0);
+      });
+    live.forEach(function (w, i) {
+      w.style.setProperty("--depth", Math.min(i, 6));
+    });
+    if (DS.glass && DS.glass.relight) DS.glass.relight();
   };
 
   wm.list = function () { return wins.slice(); };
@@ -201,6 +215,13 @@
     if (win._app.onClose) {
       try { win._app.onClose(win._api); } catch (e) { console.error(e); }
     }
+    if (!win._minimized) {
+      var r = win.getBoundingClientRect();
+      DS.glass.shatter({
+        left: r.left, top: r.top, width: r.width, height: r.height
+      });
+    }
+
     win.classList.add("closing");
     setTimeout(function () {
       if (win.parentNode) win.parentNode.removeChild(win);
@@ -215,6 +236,7 @@
         }
       }
       wm.syncDock();
+      wm.restack();
     }, 200);
   };
 
@@ -348,6 +370,7 @@
         hint.hidden = true;
         DS.glass.lite(false);
 
+        if (DS.glass.relight) DS.glass.relight();
         if (region) {
           var rect = snapRect(region, b);
           if (region === "max") {
@@ -411,6 +434,7 @@
           grip.removeEventListener("pointermove", move);
           grip.removeEventListener("pointerup", up);
           DS.glass.lite(false);
+          DS.glass.relight();
           if (win._app.onResize) win._app.onResize(win._api);
         }
         grip.addEventListener("pointermove", move);

@@ -308,6 +308,75 @@
         ], "ok");
       });
 
+      cmd("do", "system", "do [action]", "run any system action by id", function (a) {
+        if (!a[0]) {
+          write("every invocable thing in the OS, by id:", "ok");
+          var group = null;
+          DS.actions.all().forEach(function (x) {
+            if (x.group !== group) { group = x.group; write(""); write("  " + group, "dir"); }
+            write("    " + pad(x.id, 22) + x.label);
+          });
+          write("");
+          write("bind one to a key in Settings > Shortcuts", "dim");
+          return;
+        }
+        var act = DS.actions.get(a[0]);
+        if (!act) return write("do: no such action: " + a[0], "err");
+        DS.actions.run(a[0]);
+        write("  " + act.label, "ok");
+      });
+
+      cmd("keys", "system", "keys", "your keyboard shortcuts", function () {
+        var mine = DS.store.get("shortcuts", []);
+        write("built in", "ok");
+        Object.keys(DS.actions.RESERVED).forEach(function (c) {
+          write("  " + pad(c, 14) + DS.actions.RESERVED[c]);
+        });
+        write("");
+        if (!mine.length) {
+          write("you have not bound any yet - Settings > Shortcuts", "dim");
+          return;
+        }
+        write("yours", "ok");
+        mine.forEach(function (sc) {
+          var act = DS.actions.get(sc.action);
+          write("  " + pad(sc.combo, 14) + (act ? act.label : sc.action));
+        });
+      });
+
+      cmd("light", "glass", "light <x> <y>", "move the desktop light source", function (a) {
+        if (!a[0]) {
+          var l = DS.store.get("light");
+          return write("light at " + l.x + "% " + l.y + "%, strength " + l.strength + "%");
+        }
+        if (a[0] === "drift") {
+          var v = !DS.store.get("light.drift");
+          DS.store.set("light.drift", v);
+          return write("light drift " + (v ? "on" : "off"), "ok");
+        }
+        DS.store.set("light.x", DS.clamp(parseFloat(a[0]) || 0, 0, 100));
+        if (a[1] !== undefined) DS.store.set("light.y", DS.clamp(parseFloat(a[1]) || 0, -10, 100));
+        DS.glass.applyLight();
+        write("light moved", "ok");
+      });
+
+      cmd("finish", "glass", "finish <name>", "surface relief on every pane", function (a) {
+        var names = Object.keys(DS.glass.FINISHES);
+        if (!a[0]) {
+          write("finishes:", "ok");
+          names.forEach(function (n) {
+            write("  " + pad(n, 11) + DS.glass.FINISHES[n].desc);
+          });
+          return write("  current: " + DS.store.get("finish", "smooth"), "dim");
+        }
+        if (names.indexOf(a[0]) < 0) {
+          return write("finish: unknown. try: " + names.join(", "), "err");
+        }
+        DS.store.set("finish", a[0]);
+        DS.glass.applyFinish();
+        write("finish set to " + a[0], "ok");
+      });
+
       cmd("date", "system", "date", "current date and time", function () {
         write(new Date().toString());
       });

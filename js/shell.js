@@ -527,68 +527,23 @@
   };
 
   function launcherActions(q) {
-    var acts = [];
-    ["aurora", "sunset", "abyss", "verdant", "lumen"].forEach(function (t) {
-      acts.push({
-        kind: "action", icon: "palette",
-        title: "Theme: " + t.charAt(0).toUpperCase() + t.slice(1),
-        sub: "Switch the desktop theme",
-        run: function () { DS.store.set("theme", t); DS.glass.applyTheme(); }
-      });
+    /* Everything invocable comes from one registry now, so the
+       launcher, the shortcut binder and `do` cannot drift apart. */
+    var acts = DS.actions.search(q).map(function (a) {
+      var bound = DS.store.get("shortcuts", []).filter(function (s) {
+        return s.action === a.id;
+      })[0];
+      return {
+        kind: bound ? bound.combo : "action",
+        icon: a.icon || "star",
+        title: a.label,
+        sub: a.group,
+        run: function () { DS.actions.run(a.id); }
+      };
     });
-    acts.push({
-      kind: "action", icon: "plus", title: "Import files…",
-      sub: "Images, audio and video into the file system",
-      run: function () { DS.media.pick(); }
-    });
-    acts.push({
-      kind: "action", icon: "layers", title: "Tune the glass",
-      sub: "Open the optical settings",
-      run: function () { DS.wm.open("settings", { pane: "glass" }); }
-    });
-    acts.push({
-      kind: "action", icon: "eye",
-      title: (DS.store.get("refraction") ? "Disable" : "Enable") + " true refraction",
-      sub: "Toggle the SVG displacement pass",
-      run: function () {
-        DS.store.set("refraction", !DS.store.get("refraction"));
-        DS.glass.redress();
-      }
-    });
-    Object.keys(DS.widgets.TYPES).forEach(function (t) {
-      var def = DS.widgets.TYPES[t];
-      acts.push({
-        kind: "action", icon: def.icon,
-        title: "Add widget: " + def.label,
-        sub: def.desc,
-        run: function () { DS.widgets.add(t); }
-      });
-    });
-    acts.push({
-      kind: "action", icon: "star",
-      title: DS.focus.snapshot().phase === "idle" ? "Start a focus session" : "Pause / resume focus",
-      sub: "Flowmodoro timer",
-      run: function () { DS.focus.toggle(); }
-    });
-    acts.push({
-      kind: "action", icon: "trash", title: "Remove all widgets",
-      sub: DS.widgets.count() + " on the desktop",
-      run: function () { DS.widgets.clear(); }
-    });
-    acts.push({
-      kind: "action", icon: "lock", title: "Lock the screen",
-      sub: DS.lock.isSet() ? "Passcode required to return" : "No passcode set yet",
-      run: function () { shell.lockScreen(); }
-    });
-    acts.push({
-      kind: "action", icon: "x", title: "Close all windows",
-      sub: DS.wm.list().length + " open",
-      run: function () { DS.wm.list().forEach(function (w) { DS.wm.close(w); }); }
-    });
-    return acts.filter(function (a) {
-      return !q || a.title.toLowerCase().indexOf(q) >= 0;
-    });
+    return acts;
   }
+
 
   function renderLauncher(query) {
     var host = DS.qs("#lch-results");
@@ -773,8 +728,13 @@
     wireDockPeek();
 
     DS.glass.applyWallpaper();
+    DS.glass.applyLight();
+    DS.glass.applyFinish();
+    document.documentElement.setAttribute(
+      "data-depth", DS.store.get("depth", true) ? "on" : "off");
     DS.widgets.init();
     DS.alarms.start();
+    DS.actions.init();
 
     DS.store.on(function (path) {
       if (path.indexOf("avatar") === 0 || path === "user") shell.paintAvatar();
@@ -785,9 +745,20 @@
     // keep the refraction bands correct as the layout changes
     var rt = null;
     window.addEventListener("resize", function () {
+      DS.glass.relight();
       if (rt) clearTimeout(rt);
       rt = setTimeout(function () { DS.glass.redress(); }, 250);
     });
+
+    /* the light drifts slowly when asked to, which makes every rim in
+       the system breathe together */
+    setInterval(function () {
+      if (!DS.store.get("light.drift", false)) return;
+      var t = Date.now() / 42000;
+      DS.store.set("light.x", Math.round(50 + Math.sin(t) * 38));
+      DS.store.set("light.y", Math.round(22 + Math.cos(t * 0.7) * 20));
+      DS.glass.applyLight();
+    }, 1800);
   };
 
   DS.shell = shell;

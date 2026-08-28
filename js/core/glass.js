@@ -87,6 +87,68 @@
     return true;
   };
 
+  /* ═══════════════ THE LIGHT SOURCE ═══════════════
+     One light for the whole desktop. Every pane's rim gradient and
+     bloom is oriented toward the same point, so highlights across
+     unrelated windows agree with each other instead of each pane
+     pretending to be lit from its own top-left corner.
+
+     This is the main thing that stops the material reading as a
+     stack of independent frosted rectangles. */
+  var LIT_SEL = ".g, .g-btn, .dk, .di-glyph, .widget, .ca-key, .pin-key";
+
+  function lightPoint() {
+    var l = DS.store.get("light", {});
+    return {
+      x: (l.x / 100) * window.innerWidth,
+      y: (l.y / 100) * window.innerHeight
+    };
+  }
+
+  /** Write each pane's offset to the light, in its own coordinates. */
+  var relightPending = false;
+  glass.relight = function () {
+    if (relightPending) return;
+    relightPending = true;
+    requestAnimationFrame(function () {
+      relightPending = false;
+      var L = lightPoint();
+      DS.qsa(LIT_SEL).forEach(function (p) {
+        var r = p.getBoundingClientRect();
+        if (!r.width) return;
+        p.style.setProperty("--lit-x", Math.round(L.x - r.left) + "px");
+        p.style.setProperty("--lit-y", Math.round(L.y - r.top) + "px");
+      });
+    });
+  };
+
+  glass.applyLight = function () {
+    var l = DS.store.get("light", {});
+    root.style.setProperty("--light-str", (l.strength / 100).toFixed(2));
+    root.style.setProperty("--light-x", l.x + "%");
+    root.style.setProperty("--light-y", l.y + "%");
+    root.style.setProperty("--caustic", (l.caustic / 100).toFixed(2));
+    glass.relight();
+  };
+
+  /* ═══════════════ SURFACE FINISH ═══════════════
+     Real glass is rarely flat. A finish is a repeating relief on the
+     pane plus, where the browser can afford it, an actual
+     displacement of what shows through. */
+  glass.FINISHES = {
+    smooth:    { label: "Smooth",    desc: "Optically flat. The default." },
+    reeded:    { label: "Reeded",    desc: "Tall thin ribs. Vertical smear." },
+    fluted:    { label: "Fluted",    desc: "Wider, softer channels." },
+    cathedral: { label: "Cathedral", desc: "Irregular hand-rolled ripple." },
+    bubbled:   { label: "Bubbled",   desc: "Fat lazy blobs of distortion." },
+    frosted:   { label: "Frosted",   desc: "Acid-etched. Diffuse, no detail." }
+  };
+
+  glass.applyFinish = function () {
+    root.setAttribute("data-finish", DS.store.get("finish", "smooth"));
+    glass.redress();
+  };
+
   glass.applyMotion = function () {
     var on = DS.store.get("wallpaperMotion", true);
     DS.qsa(".orb").forEach(function (o) {
@@ -159,6 +221,8 @@
     glass.applyWallpaper();
     glass.applyMotion();
     glass.applyDock();
+    glass.applyLight();
+    glass.applyFinish();
     glass.redress();
   };
 
@@ -178,28 +242,79 @@
     if (scope && scope.classList && scope.classList.contains("g")) panes.push(scope);
     panes = panes.concat(DS.qsa(".g", scope || document));
 
+    var finish = DS.store.get("finish", "smooth");
+
     panes.forEach(function (p) {
-      var has = p.firstElementChild && p.firstElementChild.classList.contains("g-edge");
+      var has = !!DS.qs(":scope > .g-edge", p);
       if (on && !has && needsEdge(p)) {
         var edge = document.createElement("div");
         edge.className = "g-edge";
         p.insertBefore(edge, p.firstChild);
       } else if (!on && has) {
-        p.removeChild(p.firstElementChild);
+        p.removeChild(DS.qs(":scope > .g-edge", p));
+      }
+
+      // the finish layer sits over the whole pane, not just the rim
+      var fin = DS.qs(":scope > .g-finish", p);
+      if (finish !== "smooth" && !fin && needsEdge(p)) {
+        fin = document.createElement("div");
+        fin.className = "g-finish";
+        p.insertBefore(fin, p.firstChild);
+      } else if (finish === "smooth" && fin) {
+        p.removeChild(fin);
       }
     });
+    glass.relight();
   };
 
   /** Re-run dressing across the whole desktop (after a settings change). */
   glass.redress = function () {
-    var on = DS.store.get("refraction", true);
-    if (!on) {
+    if (!DS.store.get("refraction", true)) {
       DS.qsa(".g-edge").forEach(function (e) {
         if (e.parentNode) e.parentNode.removeChild(e);
       });
-      return;
+    }
+    if (DS.store.get("finish", "smooth") === "smooth") {
+      DS.qsa(".g-finish").forEach(function (e) {
+        if (e.parentNode) e.parentNode.removeChild(e);
+      });
     }
     glass.dress(document);
+  };
+
+  /* ═══════════════ SHATTER ═══════════════
+     Closing a pane of glass should not look like closing a rectangle
+     of frosted plastic. Shards are thrown from the window's own
+     footprint, each one carrying a slice of the same backdrop blur. */
+  glass.shatter = function (rect) {
+    if (!DS.store.get("shatter", true)) return;
+    if (DS.store.get("motion") === "off") return;
+
+    var host = DS.qs("#desktop");
+    if (!host) return;
+    var n = DS.clamp(Math.round((rect.width * rect.height) / 22000), 8, 26);
+
+    for (var i = 0; i < n; i++) {
+      var sh = document.createElement("i");
+      sh.className = "shard";
+      var sx = Math.random(), sy = Math.random();
+      var w = 18 + Math.random() * 46;
+      sh.style.left = (rect.left + sx * (rect.width - w)) + "px";
+      sh.style.top = (rect.top + sy * (rect.height - w)) + "px";
+      sh.style.width = w + "px";
+      sh.style.height = w + "px";
+      // fling outward from the centre of the pane
+      sh.style.setProperty("--dx", ((sx - 0.5) * 260 + (Math.random() - 0.5) * 90).toFixed(0) + "px");
+      sh.style.setProperty("--dy", ((sy - 0.5) * 180 + 120 + Math.random() * 120).toFixed(0) + "px");
+      sh.style.setProperty("--rot", ((Math.random() - 0.5) * 220).toFixed(0) + "deg");
+      sh.style.setProperty("--delay", (Math.random() * 90).toFixed(0) + "ms");
+      host.appendChild(sh);
+      (function (node) {
+        setTimeout(function () {
+          if (node.parentNode) node.parentNode.removeChild(node);
+        }, 900);
+      })(sh);
+    }
   };
 
   /* ── specular sheen ──────────────────────────────────────────

@@ -47,11 +47,13 @@
   TYPES.calendar = {
     label: "Calendar",
     icon: "grid",
-    desc: "This month, with today marked.",
-    w: 232, h: 226,
+    desc: "This month, today marked, and what is on.",
+    w: 232, h: 268,
     build: function (el) {
       el.appendChild(h("div.wg-cal-head"));
       el.appendChild(h("div.wg-cal"));
+      el.appendChild(h("div.wg-evs"));
+      el.addEventListener("dblclick", function () { DS.wm.open("calendar"); });
     },
     tick: function (el, rec, force) {
       var now = new Date();
@@ -69,9 +71,39 @@
       var lead = (first.getDay() + 6) % 7;               // Monday-first
       var days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       for (var i = 0; i < lead; i++) grid.appendChild(h("i"));
+
+      // mark any day that has something on it
+      var evs = DS.store.get("calendar.events", []);
+      var busy = {};
+      evs.forEach(function (e) { busy[e.date] = true; });
+
       for (var d2 = 1; d2 <= days; d2++) {
-        grid.appendChild(h("i" + (d2 === now.getDate() ? ".today" : ""), { text: d2 }));
+        var dk = now.getFullYear() + "-" +
+                 ("0" + (now.getMonth() + 1)).slice(-2) + "-" +
+                 ("0" + d2).slice(-2);
+        grid.appendChild(h("i" +
+          (d2 === now.getDate() ? ".today" : "") +
+          (busy[dk] && d2 !== now.getDate() ? ".busy" : ""), { text: d2 }));
       }
+
+      /* today's agenda underneath */
+      var todayKey = now.getFullYear() + "-" +
+                     ("0" + (now.getMonth() + 1)).slice(-2) + "-" +
+                     ("0" + now.getDate()).slice(-2);
+      var mine = evs.filter(function (e) { return e.date === todayKey; })
+        .sort(function (a, b) { return (a.start || "").localeCompare(b.start || ""); });
+      var list = el.children[2];
+      DS.clear(list);
+      if (!mine.length) {
+        list.appendChild(h("div.wg-sub", { text: "Nothing today", style: { margin: "0" } }));
+      }
+      mine.slice(0, 3).forEach(function (e) {
+        list.appendChild(h("div.wg-ev", { style: { "--ec": e.color } }, [
+          h("i"),
+          h("b", { text: e.title }),
+          h("u", { text: e.allDay ? "all day" : (e.start || "") })
+        ]));
+      });
     }
   };
 

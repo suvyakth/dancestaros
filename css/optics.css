@@ -1,0 +1,201 @@
+/* ═══════════════════════════════════════════════════════════════
+   optics.css — the second optical pass
+
+   Loaded after glass.css, and it overrides two of the five base
+   layers on purpose. Everything here exists to move the material
+   away from "translucent rectangle" and toward something that
+   behaves like a physical pane:
+
+     THE LIGHT     one source for the whole desktop, so highlights on
+                   unrelated windows agree with each other
+     FINISH        reeded, fluted, cathedral, bubbled, frosted relief
+     DEPTH         panes further down the stack blur more
+     CAUSTICS      the pool of tinted light a lit pane throws
+     SHATTER       closing a pane of glass should break it
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ═══════════════ 1. THE LIGHT ═══════════════
+   --lit-x / --lit-y are written per pane by DS.glass.relight() as the
+   offset from that pane's top-left corner to the shared light. So a
+   window on the left of the screen is lit on its right edge and vice
+   versa, which is the whole point: the rims disagree with each other
+   in exactly the way real rims would. */
+.g::before {
+  background:
+    radial-gradient(900px circle at var(--lit-x, 30%) var(--lit-y, -10%),
+      rgb(var(--edge-hi) / calc(.95 * var(--light-str, 1))) 0%,
+      rgb(var(--edge-hi) / calc(.34 * var(--light-str, 1))) 38%,
+      rgb(var(--edge-hi) / calc(.08 * var(--light-str, 1))) 72%,
+      rgb(var(--edge-hi) / .03) 100%),
+    linear-gradient(148deg,
+      rgb(var(--edge-hi) / .34) 0%,
+      rgb(var(--edge-hi) / .04) 40%,
+      rgb(var(--edge-hi) / .06) 62%,
+      rgb(var(--edge-hi) / .30) 100%);
+}
+
+.g::after {
+  background:
+    /* the bloom where the light falls on this pane */
+    radial-gradient(460px circle at var(--lit-x, 50%) var(--lit-y, 0%),
+      rgb(var(--edge-hi) / calc(.11 * var(--light-str, 1))) 0%,
+      transparent 68%),
+    /* the cursor-tracked specular, unchanged */
+    radial-gradient(180px 180px at var(--mx, 50%) var(--my, 0%),
+      rgb(var(--edge-hi) / calc(var(--g-sheen) * .16)) 0%,
+      transparent 70%),
+    linear-gradient(180deg, rgb(var(--edge-hi) / .06) 0%, transparent 22%);
+}
+
+/* buttons and beads take the same light */
+.g-btn::before {
+  background:
+    radial-gradient(400px circle at var(--lit-x, 30%) var(--lit-y, -20%),
+      rgb(var(--edge-hi) / calc(.95 * var(--light-str, 1))),
+      rgb(var(--edge-hi) / .12) 55%, rgb(var(--edge-hi) / .05) 100%),
+    linear-gradient(150deg, rgb(var(--edge-hi) / .3), rgb(var(--edge-hi) / .04) 50%,
+      rgb(var(--edge-hi) / .25));
+}
+.dk, .di-glyph, .ca-key, .pin-key {
+  background-image:
+    radial-gradient(320px circle at var(--lit-x, 40%) var(--lit-y, -10%),
+      rgb(var(--edge-hi) / calc(.20 * var(--light-str, 1))), transparent 70%),
+    linear-gradient(155deg,
+      rgb(var(--g-tint) / .20), rgb(var(--g-tint) / .04) 55%, rgb(var(--g-tint) / .15));
+}
+
+/* a faint bloom on the wallpaper where the light actually is */
+.wallpaper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(46vmax circle at var(--light-x, 26%) var(--light-y, 8%),
+    rgb(255 255 255 / calc(.10 * var(--light-str, 1))) 0%,
+    transparent 62%);
+}
+
+/* ═══════════════ 2. FINISH ═══════════════
+   Injected as a child by DS.glass.dress(). The repeating gradient is
+   the relief; the displacement filter, where the browser supports it
+   inside backdrop-filter, bends what shows through as well. */
+.g-finish {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: overlay;
+}
+[data-theme="lumen"] .g-finish { mix-blend-mode: soft-light; }
+
+[data-finish="reeded"] .g-finish {
+  background: repeating-linear-gradient(90deg,
+    rgb(255 255 255 / .26) 0 1px,
+    rgb(255 255 255 / .07) 1px 3px,
+    rgb(0 0 0 / .16) 4px 6px,
+    rgb(255 255 255 / .03) 6px 9px);
+}
+[data-finish="fluted"] .g-finish {
+  background: repeating-linear-gradient(90deg,
+    rgb(255 255 255 / .30) 0 2px,
+    rgb(255 255 255 / .06) 2px 9px,
+    rgb(0 0 0 / .18) 12px 16px,
+    rgb(255 255 255 / .04) 16px 22px);
+}
+[data-finish="cathedral"] .g-finish {
+  background:
+    repeating-linear-gradient(114deg,
+      rgb(255 255 255 / .12) 0 2px, transparent 2px 11px),
+    repeating-linear-gradient(38deg,
+      rgb(0 0 0 / .10) 0 3px, transparent 3px 14px);
+}
+[data-finish="bubbled"] .g-finish {
+  background:
+    radial-gradient(circle at 18% 24%, rgb(255 255 255 / .22) 0 6%, transparent 7%),
+    radial-gradient(circle at 62% 12%, rgb(255 255 255 / .16) 0 5%, transparent 6%),
+    radial-gradient(circle at 84% 58%, rgb(255 255 255 / .20) 0 7%, transparent 8%),
+    radial-gradient(circle at 34% 76%, rgb(255 255 255 / .14) 0 5%, transparent 6%),
+    radial-gradient(circle at 8% 62%, rgb(255 255 255 / .18) 0 4%, transparent 5%);
+  background-size: 190px 190px;
+}
+[data-finish="frosted"] .g-finish {
+  background: rgb(255 255 255 / .05);
+  backdrop-filter: blur(7px) saturate(90%);
+  -webkit-backdrop-filter: blur(7px) saturate(90%);
+  mix-blend-mode: normal;
+}
+[data-finish="frosted"] .g-edge { display: none; }
+
+/* real distortion, where backdrop-filter will take a filter reference */
+@supports (backdrop-filter: url("#ds-reed")) {
+  [data-finish="reeded"]    .g-finish { backdrop-filter: url(#ds-reed); }
+  [data-finish="fluted"]    .g-finish { backdrop-filter: url(#ds-flute); }
+  [data-finish="cathedral"] .g-finish { backdrop-filter: url(#ds-cathedral); }
+  [data-finish="bubbled"]   .g-finish { backdrop-filter: url(#ds-bubble); }
+}
+
+/* Text has to stay readable through the relief, so the pane content
+   sits above it and the finish never touches the title bar. */
+[data-finish]:not([data-finish="smooth"]) .win-bar .g-finish { display: none; }
+
+/* ═══════════════ 3. DEPTH ═══════════════
+   --depth is the window's index in the stack, written by the window
+   manager. Looking at a buried window means looking through more
+   glass, so it diffuses more and holds less colour. */
+html[data-depth="on"] .win {
+  backdrop-filter:
+    blur(calc(var(--g-blur) + var(--depth, 0) * 2.2px))
+    saturate(calc(var(--g-sat) - var(--depth, 0) * 7%))
+    brightness(var(--g-bright));
+  -webkit-backdrop-filter:
+    blur(calc(var(--g-blur) + var(--depth, 0) * 2.2px))
+    saturate(calc(var(--g-sat) - var(--depth, 0) * 7%))
+    brightness(var(--g-bright));
+}
+
+/* ═══════════════ 4. CAUSTICS ═══════════════
+   Light that has passed through a pane lands somewhere. The focused
+   window throws a soft tinted pool below itself. */
+.win.focused {
+  box-shadow:
+    var(--g-inset),
+    var(--shadow-deep),
+    0 46px 100px -34px hsl(var(--accent) / calc(.55 * var(--caustic, .55))),
+    0 18px 50px -30px rgb(var(--refract-warm) / calc(.5 * var(--caustic, .55)));
+}
+.dock, .land-card, .lock-user {
+  box-shadow:
+    var(--g-inset),
+    var(--shadow-deep),
+    0 30px 70px -34px hsl(var(--accent) / calc(.42 * var(--caustic, .55)));
+}
+
+/* ═══════════════ 5. SHATTER ═══════════════ */
+.shard {
+  position: absolute;
+  z-index: 620;
+  pointer-events: none;
+  border-radius: 2px;
+  background: rgb(255 255 255 / .07);
+  backdrop-filter: blur(7px) saturate(170%) brightness(1.1);
+  -webkit-backdrop-filter: blur(7px) saturate(170%) brightness(1.1);
+  box-shadow:
+    inset 0 0 0 .5px rgb(255 255 255 / .55),
+    inset 0 2px 8px -3px rgb(var(--refract-cool) / .8),
+    0 6px 18px -8px rgb(0 0 0 / .6);
+  clip-path: polygon(52% 0%, 100% 58%, 74% 100%, 12% 86%, 0% 34%);
+  animation: shardFly 780ms cubic-bezier(.22, .62, .3, 1) var(--delay, 0ms) forwards;
+}
+@keyframes shardFly {
+  0%   { opacity: 0; transform: translate(0, 0) rotate(0deg) scale(1); }
+  12%  { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx, 0), var(--dy, 140px)) rotate(var(--rot, 90deg)) scale(.35);
+  }
+}
+
+/* perf mode drops the expensive extras first */
+html.perf-lite .g-finish { backdrop-filter: none !important; }
+html.perf-lite .wallpaper::after { display: none; }

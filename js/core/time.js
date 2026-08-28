@@ -102,6 +102,11 @@
     });
 
     if (changed) DS.store.set("clock.alarms", alarms);
+
+    // one clock decides when anything fires, calendar reminders included
+    if (DS.calendarCheck) {
+      try { DS.calendarCheck(); } catch (e) { console.error(e); }
+    }
   }
 
   function fire(a) {

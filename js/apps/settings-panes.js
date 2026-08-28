@@ -333,6 +333,175 @@
     }
   });
 
+  /* ═══════════════════ SHORTCUTS ═══════════════════ */
+
+  /** Searchable action picker. Resolves with an action id, or null. */
+  function pickAction() {
+    return new Promise(function (resolve) {
+      var veil = h("div.dlg-veil");
+      var panel = h("div.dlg.sc-pick.g");
+      var list = h("div.sc-list");
+      var search = h("input.g-field", {
+        type: "text", placeholder: "Search actions…",
+        oninput: function () { paint(search.value); }
+      });
+
+      function paint(q) {
+        DS.clear(list);
+        var found = DS.actions.search(q);
+        var group = null;
+        found.slice(0, 120).forEach(function (a) {
+          if (a.group !== group) {
+            group = a.group;
+            list.appendChild(h("div.lch-group", { text: group }));
+          }
+          list.appendChild(h("div.lch-row", {
+            onclick: function () { done(a.id); }
+          }, [
+            h("div.li", { html: DS.icon(a.icon || "star", 15) }),
+            h("div.lt2", {}, [h("b", { text: a.label }), h("i", { text: a.id })])
+          ]));
+        });
+        if (!found.length) {
+          list.appendChild(h("div.empty-state", { style: { "min-height": "90px" } }, [
+            h("div", { text: "Nothing matches" })
+          ]));
+        }
+      }
+
+      function done(v) {
+        document.removeEventListener("keydown", onKey, true);
+        if (veil.parentNode) veil.parentNode.removeChild(veil);
+        resolve(v);
+      }
+      function onKey(e) {
+        if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); done(null); }
+      }
+
+      panel.appendChild(h("h3", { text: "What should it do?" }));
+      panel.appendChild(search);
+      panel.appendChild(list);
+      panel.appendChild(h("div.row", { style: { "margin-top": "14px" } }, [
+        h("button.g-btn", { text: "Cancel", onclick: function () { done(null); } })
+      ]));
+      veil.appendChild(panel);
+      DS.qs("#desktop").appendChild(veil);
+      DS.glass.dress(panel);
+      document.addEventListener("keydown", onKey, true);
+      paint("");
+      setTimeout(function () { search.focus(); }, 60);
+    });
+  }
+
+  DS.settingsPanes.push({
+    id: "shortcuts",
+    label: "Shortcuts",
+    icon: "cpu",
+    after: "widgets",
+    build: function (host, ctx) {
+      host.appendChild(h("h2.st-h", { text: "Keyboard shortcuts" }));
+      host.appendChild(h("p.st-sub", {
+        text: "Bind any key combination to anything the system can do. Every " +
+              "app, theme, glass preset, finish and widget is an action, so " +
+              "the list below is the same one the launcher searches."
+      }));
+
+      /* record a new one */
+      var combo = null;
+      var recording = false;
+      var comboEl = h("div.sc-combo", { text: "Click, then press keys" });
+      var addBtn = h("button.g-btn.g-btn-accent", {
+        html: DS.icon("plus", 14) + "<span>Bind it</span>",
+        disabled: true,
+        onclick: function () {
+          if (!combo) return;
+          pickAction().then(function (actionId) {
+            if (!actionId) return;
+            DS.actions.add(combo, actionId);
+            DS.ui.toast({
+              icon: "check", title: combo,
+              body: DS.actions.get(actionId).label
+            });
+            ctx.render();
+          });
+        }
+      });
+
+      function stopRec() {
+        recording = false;
+        comboEl.classList.remove("rec");
+        document.removeEventListener("keydown", grab, true);
+      }
+      function grab(e) {
+        var c = DS.actions.comboOf(e);
+        if (!c) return;                       // a bare modifier, keep waiting
+        e.preventDefault();
+        e.stopPropagation();
+        combo = c;
+        comboEl.textContent = c;
+        addBtn.disabled = false;
+        stopRec();
+
+        var clash = DS.actions.RESERVED[c];
+        warn.textContent = clash
+          ? "Careful: the system already uses this for “" + clash + "”."
+          : DS.actions.bindingFor(c)
+            ? "This replaces an existing shortcut."
+            : "";
+        warn.classList.toggle("bad", !!clash);
+      }
+      comboEl.addEventListener("click", function () {
+        if (recording) { stopRec(); return; }
+        recording = true;
+        combo = null;
+        addBtn.disabled = true;
+        comboEl.textContent = "Press keys…";
+        comboEl.classList.add("rec");
+        document.addEventListener("keydown", grab, true);
+      });
+
+      var warn = h("div.pin-msg", { style: { "text-align": "left", "min-height": "14px" } });
+
+      host.appendChild(DS.ui.section("New shortcut"));
+      host.appendChild(h("div.sc-row", {}, [comboEl, h("div", { style: { flex: "1" } }), addBtn]));
+      host.appendChild(warn);
+
+      /* existing */
+      var mine = DS.store.get("shortcuts", []);
+      host.appendChild(DS.ui.section(mine.length ? "Yours" : "None yet"));
+      if (!mine.length) {
+        host.appendChild(h("p.st-hint", {
+          text: "Try Ctrl+Shift+T for the shell, or Ctrl+Shift+P to flip the " +
+                "glass to Plastic and back."
+        }));
+      }
+      mine.forEach(function (sc) {
+        var a = DS.actions.get(sc.action);
+        host.appendChild(h("div.sc-row", {}, [
+          h("div.sc-combo", { text: sc.combo }),
+          h("div.sc-what", { text: a ? a.label : "(missing: " + sc.action + ")" }),
+          h("button.g-btn.g-btn-sq", {
+            html: DS.icon("trash", 14),
+            onclick: function () { DS.actions.remove(sc.id); ctx.render(); }
+          })
+        ]));
+      });
+
+      host.appendChild(DS.ui.section("Built in"));
+      Object.keys(DS.actions.RESERVED).forEach(function (c) {
+        host.appendChild(h("div.sc-row", {}, [
+          h("div.sc-combo", { text: c }),
+          h("div.sc-what.sc-res", { text: DS.actions.RESERVED[c] })
+        ]));
+      });
+
+      host.appendChild(h("p.st-hint", {
+        text: "Shortcuts do not fire while you are typing in a text field, " +
+              "unless the combination uses Ctrl or Alt."
+      }));
+    }
+  });
+
   /* ═══════════════════ LOCK ═══════════════════ */
   DS.settingsPanes.push({
     id: "lock",
