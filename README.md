@@ -99,6 +99,9 @@ straight lines are what make refraction legible.
 | **Settings** | Appearance, Wallpaper studio, Glass, Looks, Widgets, Desktop, Storage. |
 | **Music** | An ambient generator. No audio files: each track is a chord of Web Audio oscillators through a sweeping low-pass filter. The level meter is driven by a real `AnalyserNode`. |
 | **Photos** | Image browser. The "images" are CSS gradients, which gives the glass viewer frame saturated colour to refract. |
+| **Image Lab** | Non-destructive photo editing: nine adjustments, seven looks, rotate/flip, export. |
+| **Audio Lab** | Waveform, five-band EQ, effects rack, trim, render to WAV. |
+| **Video Lab** | Trim, colour grade, speed, frame grab, export to WebM. |
 | **Clock** | World clocks, alarms, stopwatch, countdown timer. |
 | **Focus** | Flowmodoro and Pomodoro over one shared engine. |
 | **About** | Live frame rate, glass-surface count, and a breakdown of the five layers. |
@@ -106,6 +109,70 @@ straight lines are what make refraction legible.
 The file system is shared, which is what makes this feel like an OS rather than
 a page of unrelated widgets: write a note in **Notes**, then `cat` it in
 **Terminal**, then rename it in **Finder**.
+
+---
+
+## Where media is stored
+
+localStorage holds everything else in this OS, but it is the wrong home
+for media: it caps out around 5MB and only holds strings, so one phone
+photo would blow the entire budget after base64 inflation.
+
+So there are two stores:
+
+| Store | Holds |
+|-------|-------|
+| **localStorage** (`dancestar.os.v1`) | Settings, notes, the virtual file tree |
+| **IndexedDB** (`dancestar-media`) | The actual bytes of every imported and exported file |
+
+A file in the tree carries a `media` id instead of `content`. The tree
+stays small and JSON-serialisable; the bytes live next door as a Blob,
+with a quota in the hundreds of MB to GBs. Object URLs are cached per id
+and revoked on delete, and Settings > Storage shows real usage against
+the browser's estimate with a button to sweep blobs nothing points at any
+more.
+
+### Getting files in
+
+- **Drag and drop** anywhere on the desktop
+- **Import** in Finder, Photos, or any of the three labs
+- `import` in the shell
+- Ctrl+K > "Import files"
+
+They are filed by kind: images to Pictures, audio to Music, video to
+Movies. Everything else goes to Documents.
+
+---
+
+## The three labs
+
+All three share one shape - library rail, stage, control panel - and one
+principle: **the preview and the export run through the same code**.
+
+**Image Lab** is non-destructive. The adjustments are a filter string
+plus a transform, applied at draw time to an untouched source, so
+nothing is baked in until you export. Canvas `ctx.filter` takes the same
+syntax as the CSS `filter` property, so the live preview and the exported
+pixels genuinely go through one path. The seeded gradient pictures get
+rasterised into a canvas first so they are editable too.
+
+**Audio Lab** decodes to an AudioBuffer, draws the waveform, and runs a
+five-band EQ (80 / 250 / 1k / 4k / 10k) plus high-pass, low-pass, drive,
+reverb and delay. `buildChain()` is called twice - once against the live
+AudioContext for monitoring, once against an OfflineAudioContext for the
+render - so what you hear is provably what you get. Drag across the
+waveform to trim. Export is a hand-written 16-bit PCM WAV encoder, and
+renders faster than real time because OfflineAudioContext is not bound to
+the clock.
+
+**Video Lab** previews with a CSS filter, which costs nothing. Export is
+the honest version: every frame is drawn to a canvas with the identical
+filter string, the canvas is captured with `captureStream()`, the
+element's audio is routed through a `MediaStreamDestination`, and both
+tracks go into a `MediaRecorder`. That means **export runs in real time** -
+a 30-second clip takes 30 seconds. There is no way around that in a
+browser without shipping a WASM encoder, and this project has no
+dependencies. Frame grabs are instant and land in Pictures.
 
 ---
 
@@ -214,6 +281,7 @@ css/
   desktop.css       menu bar, dock (3 positions), launcher, menus, toasts
   apps.css          per-app styling
   timers.css        Clock and Focus, plus the studio controls
+  labs.css          the three media editors, and drop-to-import
   widgets.css       desktop widgets
   setup.css         setup wizard and greeting screen
 js/
@@ -222,7 +290,8 @@ js/
     store.js        persisted state (one localStorage key)
     glass.js        optical runtime: tokens, accent, presets, wallpaper,
                     refraction, sheen, dock geometry, perf mode
-    fs.js           virtual file system
+    fs.js           virtual file system (media-aware)
+    media.js        IndexedDB blob store, import, export, quota
     time.js         synthesised chimes + the alarm daemon
     focus.js        the Flowmodoro / Pomodoro engine
     ui.js           menus, dialogs, toasts, glass control factories

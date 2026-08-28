@@ -74,7 +74,8 @@
       sessions: []             // { start, ms, mode }
     },
     dockApps: ["finder", "notes", "terminal", "focus", "clock", "calc",
-               "music", "photos", "settings", "about"],
+               "music", "photos", "imagelab", "audiolab", "videolab",
+               "settings", "about"],
     user: "you",
     fs: null,
     volume: 65,

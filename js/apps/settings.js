@@ -479,6 +479,72 @@
           ]));
         });
 
+        /* media lives in IndexedDB, which has its own budget */
+        host.appendChild(DS.ui.section("Media (IndexedDB)"));
+        host.appendChild(h("p.st-hint", {
+          text: "Imported and exported files are stored as blobs in IndexedDB, " +
+                "not in localStorage — the settings key above could not hold " +
+                "even one photo."
+        }));
+        var mediaCard = h("div.g-card", {}, [h("span", { text: "Reading…" })]);
+        host.appendChild(mediaCard);
+
+        if (DS.media && DS.media.available) {
+          DS.media.usage().then(function (u) {
+            DS.clear(mediaCard);
+            var pct = u.quota ? (u.used / u.quota) * 100 : 0;
+            mediaCard.appendChild(h("div", {
+              style: { display: "flex", "justify-content": "space-between",
+                       "align-items": "baseline", "margin-bottom": "9px" }
+            }, [
+              h("b", { text: DS.bytes(u.bytes),
+                       style: { "font-size": "18px", "font-weight": "600" } }),
+              h("span", {
+                text: u.count + " file" + (u.count === 1 ? "" : "s"),
+                style: { color: "var(--text-3)", "font-size": "12px" }
+              })
+            ]));
+            if (u.quota) {
+              mediaCard.appendChild(h("div.g-progress", {}, [
+                h("i", { style: { width: Math.max(0.5, pct).toFixed(2) + "%" } })
+              ]));
+              mediaCard.appendChild(h("div", {
+                text: DS.bytes(u.used) + " of about " + DS.bytes(u.quota) +
+                      " the browser will allow.",
+                style: { "margin-top": "8px", "font-size": "11.5px", color: "var(--text-3)" }
+              }));
+            }
+          });
+        } else {
+          DS.clear(mediaCard);
+          mediaCard.appendChild(h("span", {
+            text: "IndexedDB is unavailable, so media import is switched off."
+          }));
+        }
+
+        host.appendChild(h("div", {
+          style: { display: "flex", gap: "8px", "margin-top": "12px", "flex-wrap": "wrap" }
+        }, [
+          h("button.g-btn", {
+            html: DS.icon("plus", 14) + "<span>Import files</span>",
+            onclick: function () { DS.media.pick().then(render); }
+          }),
+          h("button.g-btn", {
+            html: DS.icon("refresh", 14) + "<span>Clear orphaned blobs</span>",
+            title: "Delete stored bytes that no file in the tree points at",
+            onclick: function () {
+              DS.media.sweep().then(function (n) {
+                DS.ui.toast({
+                  icon: "trash",
+                  title: n ? "Removed " + n + " orphan" + (n === 1 ? "" : "s") : "Nothing to clear",
+                  body: n ? "Blobs with no file pointing at them." : "Every blob is still in use."
+                });
+                render();
+              });
+            }
+          })
+        ]));
+
         host.appendChild(DS.ui.section("Danger zone"));
         host.appendChild(h("button.g-btn.g-btn-danger", {
           html: DS.icon("trash", 14) + "<span>Erase all data and restart</span>",

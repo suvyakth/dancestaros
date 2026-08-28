@@ -239,12 +239,44 @@
         if (!fs.rename(resolve(a[0]), a[1])) write("mv: failed", "err");
       });
 
-      cmd("edit", "files", "edit <file>", "open a file in Notes", function (a) {
+      cmd("edit", "files", "edit <file>", "open a file in its editor", function (a) {
         if (!a[0]) return write("edit: missing file", "err");
         var t = resolve(a[0]);
         if (!fs.exists(t)) fs.write(t, "");
+        var n = fs.node(t);
+        var app = n.kind === "image" ? "imagelab"
+                : n.kind === "audio" ? "audiolab"
+                : n.kind === "video" ? "videolab" : null;
+        if (app) { DS.wm.open(app, { path: t }); return write("opened in " + app, "dim"); }
         DS.openPath(t);
         write("opened " + t + " in Notes", "dim");
+      });
+
+      cmd("import", "files", "import", "bring real files in from your computer",
+        function () {
+          write("  opening the file picker...", "dim");
+          DS.media.pick(null, cwd).then(function (made) {
+            if (!made.length) return write("  nothing imported", "dim");
+            made.forEach(function (m) {
+              write("  " + pad(m.kind, 7) + pad(DS.bytes(m.size), 11) + m.path, "ok");
+            });
+          });
+        });
+
+      cmd("media", "system", "media", "what is stored in IndexedDB", function () {
+        if (!DS.media.available) return write("media: IndexedDB unavailable", "err");
+        write("  reading...", "dim");
+        DS.media.usage().then(function (u) {
+          box([
+            "IndexedDB  dancestar-media",
+            "",
+            "files      " + u.count,
+            "bytes      " + DS.bytes(u.bytes),
+            "browser    " + DS.bytes(u.used) + " used of about " + DS.bytes(u.quota),
+            "",
+            "Settings > Storage can sweep orphaned blobs."
+          ], "ok");
+        });
       });
 
       /* ── system ── */

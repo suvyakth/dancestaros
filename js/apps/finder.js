@@ -14,12 +14,15 @@
     { label: "Notes",     path: "/Users/you/Notes",      icon: "notes" },
     { label: "Pictures",  path: "/Users/you/Pictures",   icon: "image" },
     { label: "Music",     path: "/Users/you/Music",      icon: "music" },
+    { label: "Movies",    path: "/Users/you/Movies",     icon: "photos" },
     { label: "System",    path: "/System",               icon: "cpu" }
   ];
 
   function kindIcon(entry) {
     if (entry.type === "dir") return "folder";
     if (entry.kind === "image") return "image";
+    if (entry.kind === "audio") return "music";
+    if (entry.kind === "video") return "photos";
     if (/\.md$/i.test(entry.name)) return "notes";
     if (/\.(conf|cfg|ini)$/i.test(entry.name)) return "sliders";
     return "doc";
@@ -74,8 +77,15 @@
         btnBack, btnFwd, crumbs,
         h("div", { style: { flex: "1" } }),
         viewSeg,
+        h("button.g-btn", {
+          html: DS.icon("plus", 14) + "<span>Import</span>",
+          title: "Bring real files in from your computer",
+          onclick: function () {
+            DS.media.pick(null, state.path).then(render);
+          }
+        }),
         h("button.g-btn.g-btn-sq", {
-          html: DS.icon("plus", 15), title: "New folder",
+          html: DS.icon("folder", 15), title: "New folder",
           onclick: newFolder
         })
       ]);
@@ -146,8 +156,14 @@
       function entryMenu(e, entry) {
         e.preventDefault();
         e.stopPropagation();
+        var editor = entry.kind === "image" ? "imagelab"
+                   : entry.kind === "audio" ? "audiolab"
+                   : entry.kind === "video" ? "videolab" : null;
         DS.ui.ctx(e.clientX, e.clientY, [
-          { label: entry.type === "dir" ? "Open" : "Open", icon: "eye", action: function () { open(entry); } },
+          { label: "Open", icon: "eye", action: function () { open(entry); } },
+          editor ? { label: "Edit…", icon: "sliders", action: function () {
+              DS.wm.open(editor, { path: entry.path });
+            } } : null,
           { sep: true },
           { label: "Rename…", icon: "notes", action: function () { rename(entry); } },
           { label: "Duplicate", icon: "layers", action: function () {
@@ -164,7 +180,7 @@
             } },
           { sep: true },
           { label: "Delete", icon: "trash", action: function () { remove(entry); } }
-        ]);
+        ].filter(Boolean));
       }
 
       function bgMenu(e) {
@@ -173,6 +189,9 @@
         DS.ui.ctx(e.clientX, e.clientY, [
           { label: "New Folder", icon: "folder", action: newFolder },
           { label: "New File", icon: "file", action: newFile },
+          { label: "Import files…", icon: "plus", action: function () {
+              DS.media.pick(null, state.path).then(render);
+            } },
           { sep: true },
           { label: "Refresh", icon: "refresh", action: render }
         ]);
@@ -235,9 +254,21 @@
         items.forEach(function (entry) {
           var node;
           if (state.view === "grid") {
-            var thumb = entry.kind === "image"
-              ? h("div.fx-thumb", { style: { background: entry.node.content } })
-              : h("div.fx-glyph", { html: DS.icon(kindIcon(entry), 22) });
+            var thumb;
+            if (entry.kind === "image" && entry.media) {
+              thumb = h("div.fx-thumb");
+              DS.media.url(entry.media).then(function (u) {
+                if (u) {
+                  thumb.style.backgroundImage = "url(" + u + ")";
+                  thumb.style.backgroundSize = "cover";
+                  thumb.style.backgroundPosition = "center";
+                }
+              });
+            } else if (entry.kind === "image") {
+              thumb = h("div.fx-thumb", { style: { background: entry.node.content } });
+            } else {
+              thumb = h("div.fx-glyph", { html: DS.icon(kindIcon(entry), 22) });
+            }
             node = h("div.fx-item", {}, [
               thumb,
               h("div.fx-name", { text: entry.name })

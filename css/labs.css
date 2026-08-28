@@ -1,0 +1,284 @@
+/* ═══════════════════════════════════════════════════════════════
+   labs.css — Image Lab, Audio Lab, Video Lab
+
+   All three share one skeleton: a library rail on the left, a stage
+   in the middle, and a control panel on the right. The stage is the
+   only place in the OS that shows opaque pixels — because the whole
+   point of it is the user's own media — so it gets a recessed glass
+   well to sit in rather than pretending otherwise.
+   ═══════════════════════════════════════════════════════════════ */
+
+.lab-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.lab-panel {
+  flex: none;
+  width: 244px;
+  padding: 10px 14px 20px;
+  overflow-y: auto;
+  background: linear-gradient(180deg,
+    rgb(var(--edge-lo) / .10), rgb(var(--edge-lo) / .04));
+  box-shadow: inset 1px 0 0 rgb(var(--edge-hi) / .10);
+}
+.lab-panel .side-label { padding: 14px 0 6px; }
+.lab-panel .st-hint { margin-top: 14px; }
+
+.lab-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lab-presets .g-btn { height: 27px; padding: 0 11px; font-size: 11.5px; }
+
+/* the media well */
+.lab-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow: hidden;
+  background:
+    linear-gradient(rgb(var(--edge-lo) / .22), rgb(var(--edge-lo) / .3));
+  box-shadow:
+    inset 0 2px 12px rgb(var(--edge-lo) / .35),
+    inset 0 0 0 .5px rgb(var(--edge-hi) / .1),
+    inset 0 -1px 14px -6px rgb(var(--refract-warm) / .35);
+  transition: box-shadow 200ms var(--ease);
+}
+.lab-stage.drop {
+  box-shadow:
+    inset 0 0 0 2px hsl(var(--accent) / .8),
+    inset 0 2px 30px -6px hsl(var(--accent) / .45);
+}
+
+.lab-canvas, .vl-video {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--g-radius-sm);
+  box-shadow:
+    0 0 0 .5px rgb(var(--edge-hi) / .28),
+    inset 0 1px 0 rgb(255 255 255 / .3),
+    0 18px 40px -16px rgb(0 0 0 / .7);
+}
+
+/* thumbnails in the library rail */
+.lab-th {
+  flex: none;
+  width: 26px; height: 26px;
+  border-radius: 7px;
+  background-size: cover;
+  background-position: center;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .35),
+              0 0 0 .5px rgb(var(--edge-hi) / .25);
+}
+
+/* ───────────────────── AUDIO LAB ───────────────────── */
+.al-wave {
+  position: relative;
+  flex: none;
+  height: 190px;
+  margin: 0;
+  overflow: hidden;
+  background: linear-gradient(rgb(var(--edge-lo) / .2), rgb(var(--edge-lo) / .28));
+  box-shadow:
+    inset 0 2px 12px rgb(var(--edge-lo) / .34),
+    inset 0 0 0 .5px rgb(var(--edge-hi) / .1);
+  transition: box-shadow 200ms var(--ease);
+  cursor: crosshair;
+}
+.al-wave.drop {
+  box-shadow: inset 0 0 0 2px hsl(var(--accent) / .8),
+              inset 0 2px 30px -6px hsl(var(--accent) / .45);
+}
+.lab-wave { display: block; width: 100%; height: 100%; }
+
+.al-play {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 1.5px;
+  pointer-events: none;
+  opacity: 0;
+  background: rgb(255 255 255 / .9);
+  box-shadow: 0 0 10px 1px hsl(var(--accent) / .9);
+  transition: opacity 200ms linear;
+}
+
+.al-eq {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 6px 2px 2px;
+}
+.al-band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+.al-band i {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.al-band span { font-size: 9.5px; color: var(--text-3); }
+
+/* vertical range — writing-mode is the modern way, and Chromium,
+   Firefox and Safari all take it now */
+.al-vert {
+  -webkit-appearance: none;
+  appearance: none;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 22px;
+  height: 104px;
+  background: transparent;
+  cursor: pointer;
+}
+.al-vert::-webkit-slider-runnable-track {
+  width: 6px;
+  border-radius: 999px;
+  background: rgb(var(--edge-lo) / .26);
+  box-shadow: inset 0 0 3px rgb(var(--edge-lo) / .4),
+              inset 0 0 0 .5px rgb(var(--edge-hi) / .2);
+}
+.al-vert::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: linear-gradient(155deg, rgb(255 255 255 / .58), rgb(255 255 255 / .16));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / .9),
+    inset 0 -1px 4px -1px rgb(var(--refract-warm) / .7),
+    0 0 0 .5px rgb(var(--edge-hi) / .35),
+    0 2px 6px rgb(var(--edge-lo) / .4);
+}
+.al-vert::-moz-range-track {
+  width: 6px; border-radius: 999px; background: rgb(var(--edge-lo) / .26);
+}
+.al-vert::-moz-range-thumb {
+  width: 15px; height: 15px; border: 0; border-radius: 50%;
+  background: rgb(255 255 255 / .55);
+  box-shadow: 0 0 0 .5px rgb(255 255 255 / .5), 0 2px 6px rgb(0 0 0 / .35);
+}
+
+/* ───────────────────── VIDEO LAB ───────────────────── */
+.vl-stage { padding: 14px; }
+.vl-video { display: block; background: #000; }
+.vl-vignette {
+  position: absolute;
+  inset: 14px;
+  pointer-events: none;
+  opacity: 0;
+  border-radius: var(--g-radius-sm);
+  background: radial-gradient(ellipse at center,
+    rgba(0,0,0,0) 42%, rgba(0,0,0,.92) 100%);
+  transition: opacity 200ms linear;
+}
+
+.vl-transport {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px 4px;
+}
+.vl-time {
+  font-size: 11.5px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.vl-bar {
+  position: relative;
+  flex: none;
+  height: 22px;
+  margin: 0 12px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  background: rgb(var(--edge-lo) / .24);
+  box-shadow:
+    inset 0 1px 4px rgb(var(--edge-lo) / .36),
+    inset 0 0 0 .5px rgb(var(--edge-hi) / .16);
+}
+.vl-band {
+  position: absolute;
+  top: 0; bottom: 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, hsl(var(--accent) / .42), hsl(var(--accent-2) / .3));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / .35),
+    inset 0 0 0 .5px hsl(var(--accent) / .6);
+  pointer-events: none;
+}
+.vl-head {
+  position: absolute;
+  top: -3px; bottom: -3px;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 99px;
+  background: #fff;
+  box-shadow: 0 0 10px 1px hsl(var(--accent) / .9);
+  pointer-events: none;
+}
+
+/* ───────────────────── NARROW ───────────────────── */
+@media (max-width: 900px) {
+  .lab-panel { width: 200px; }
+}
+
+
+/* ───────────────── DROP TO IMPORT ─────────────────
+   Shown whenever real files are dragged over the desktop. */
+.drop-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 870;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: rgb(var(--edge-lo) / .3);
+  backdrop-filter: blur(5px) saturate(130%);
+  -webkit-backdrop-filter: blur(5px) saturate(130%);
+  animation: fadeIn 160ms var(--ease);
+}
+.drop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 34px 46px;
+  text-align: center;
+  --g-alpha: .12;
+  box-shadow:
+    var(--g-inset),
+    inset 0 0 0 2px hsl(var(--accent) / .55),
+    var(--shadow-deep);
+  animation: dropIn 260ms var(--ease-back);
+}
+@keyframes dropIn { from { opacity: 0; transform: scale(.94); } }
+.drop-card > * { position: relative; z-index: 3; }
+.drop-card b { font-size: 16px; font-weight: 600; }
+.drop-card span { font-size: 12px; color: var(--text-2); max-width: 34ch; line-height: 1.5; }
+.drop-ico {
+  width: 54px; height: 54px;
+  margin-bottom: 6px;
+  border-radius: 16px;
+  background: linear-gradient(150deg, hsl(var(--accent) / .55), hsl(var(--accent-2) / .4));
+  box-shadow:
+    inset 0 1.5px 0 rgb(255 255 255 / .45),
+    0 0 26px -6px hsl(var(--accent) / .7);
+  animation: dropBob 1.6s ease-in-out infinite;
+}
+@keyframes dropBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}

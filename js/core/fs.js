@@ -120,7 +120,8 @@
             )
           }),
           Pictures: dir("Pictures", pics),
-          Music: dir("Music", {})
+          Music: dir("Music", {}),
+          Movies: dir("Movies", {})
         })
       }),
       System: dir("System", {
@@ -210,7 +211,10 @@
             kind: c.kind || (c.type === "dir" ? "dir" : "text"),
             path: join(path, c.name),
             mtime: c.mtime,
-            size: c.type === "file" ? (c.content || "").length : Object.keys(c.children).length,
+            media: c.media || null,
+            size: c.type === "file"
+              ? (c.media ? (c.size || 0) : (c.content || "").length)
+              : Object.keys(c.children).length,
             node: c
           };
         })
@@ -241,6 +245,28 @@
       return true;
     },
 
+    /** A file whose bytes live in IndexedDB rather than in the tree. */
+    writeMedia: function (path, mediaId, kind, size, mime) {
+      var p = fs.parent(path);
+      if (!p || p.type !== "dir") return false;
+      var name = fs.basename(path);
+      p.children[name] = {
+        type: "file",
+        name: name,
+        kind: kind || "file",
+        media: mediaId,
+        size: size || 0,
+        mime: mime || "",
+        mtime: Date.now()
+      };
+      p.mtime = Date.now();
+      fs.flush();
+      return true;
+    },
+
+    /** True for a node backed by a real uploaded/exported file. */
+    isMedia: function (node) { return !!(node && node.media); },
+
     mkdir: function (path) {
       var p = fs.parent(path);
       if (!p || p.type !== "dir") return false;
@@ -255,9 +281,24 @@
       var p = fs.parent(path);
       var name = fs.basename(path);
       if (!p || !p.children[name]) return false;
+
+      // collect any blobs about to be orphaned
+      var doomed = [];
+      (function collect(node) {
+        if (!node) return;
+        if (node.media) doomed.push(node.media);
+        if (node.type === "dir") {
+          Object.keys(node.children).forEach(function (k) { collect(node.children[k]); });
+        }
+      })(p.children[name]);
+
       delete p.children[name];
       p.mtime = Date.now();
       fs.flush();
+
+      if (doomed.length && DS.media) {
+        doomed.forEach(function (id) { DS.media.del(id); });
+      }
       return true;
     },
 

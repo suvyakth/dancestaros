@@ -1,9 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════
    photos.js — image browser over /Users/you/Pictures
 
-   The "images" are CSS gradients rather than files, which keeps the
-   project asset-free and, more usefully, gives the glass viewer
-   frame saturated colour to refract at its edges.
+   Two kinds of picture live here. The seeded ones are CSS gradients,
+   which keeps a fresh install asset-free and gives the glass viewer
+   frame saturated colour to refract. Imported ones are real blobs in
+   IndexedDB. Both render onto the same element as a background.
    ═══════════════════════════════════════════════════════════════ */
 (function (DS) {
   "use strict";
@@ -40,7 +41,13 @@
           [{ label: "S", value: 4 }, { label: "M", value: 3 }, { label: "L", value: 2 }],
           3,
           function (v) { size = v; paintGrid(); }
-        )
+        ),
+        h("button.g-btn", {
+          html: DS.icon("plus", 14) + "<span>Import</span>",
+          onclick: function () {
+            DS.media.pick("image/*", DIR).then(function () { load(); paintGrid(); });
+          }
+        })
       ]);
       var backBtn = toolbar.firstChild;
       var tname = DS.qs(".ph-tname", toolbar);
@@ -62,6 +69,20 @@
         });
       }
 
+      /* A seed picture is a CSS gradient; an imported one is a blob in
+         IndexedDB. Both end up as a background on the same element. */
+      function paint(el, item) {
+        if (item.media) {
+          el.style.backgroundSize = "cover";
+          el.style.backgroundPosition = "center";
+          DS.media.url(item.media).then(function (u) {
+            if (u) el.style.backgroundImage = "url(" + u + ")";
+          });
+        } else {
+          el.style.background = item.node.content;
+        }
+      }
+
       function paintGrid() {
         DS.clear(grid);
         grid.style.setProperty("--cols", size);
@@ -73,12 +94,15 @@
           return;
         }
         items.forEach(function (item, i) {
-          grid.appendChild(h("div.ph-cell", {
+          var cell = h("div.ph-cell", {
             onclick: function () { show(i); },
             oncontextmenu: function (e) {
               e.preventDefault();
               DS.ui.ctx(e.clientX, e.clientY, [
                 { label: "Open", icon: "eye", action: function () { show(i); } },
+                { label: "Edit in Image Lab", icon: "sliders", action: function () {
+                    DS.wm.open("imagelab", { path: item.path });
+                  } },
                 { label: "Show in Finder", icon: "finder", action: function () {
                     DS.wm.open("finder", { path: DIR });
                   } },
@@ -95,9 +119,11 @@
               ]);
             }
           }, [
-            h("div.ph-thumb", { style: { background: item.node.content } }),
+            h("div.ph-thumb"),
             h("div.ph-name", { text: item.name })
-          ]));
+          ]);
+          paint(DS.qs(".ph-thumb", cell), item);
+          grid.appendChild(cell);
         });
       }
 
@@ -105,7 +131,9 @@
         if (!items.length) return;
         viewing = (i + items.length) % items.length;
         var item = items[viewing];
-        stageImg.style.background = item.node.content;
+        stageImg.style.background = "";
+        stageImg.style.backgroundImage = "";
+        paint(stageImg, item);
         DS.clear(stageCap);
         stageCap.appendChild(h("b", { text: item.name }));
         stageCap.appendChild(h("span", {

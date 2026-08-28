@@ -18,6 +18,8 @@
       return;
     }
     if (node.type === "dir") { DS.wm.open("finder", { path: path }); return; }
+    if (node.kind === "audio") { DS.wm.open("audiolab", { path: path }); return; }
+    if (node.kind === "video") { DS.wm.open("videolab", { path: path }); return; }
     if (node.kind === "image") { DS.wm.open("photos", { path: path }); return; }
     DS.wm.open("notes", { path: path });
   };
@@ -331,9 +333,24 @@
     var host = DS.qs("#desk-icons");
     DS.clear(host);
     fs.list("/Users/you/Desktop").forEach(function (item) {
-      var glyph = item.kind === "image"
-        ? h("div.di-glyph", { style: { background: item.node.content } })
-        : h("div.di-glyph", { html: DS.icon(item.type === "dir" ? "folder" : "doc", 22) });
+      var glyph;
+      if (item.kind === "image" && item.media) {
+        glyph = h("div.di-glyph");
+        DS.media.url(item.media).then(function (u) {
+          if (u) {
+            glyph.style.backgroundImage = "url(" + u + ")";
+            glyph.style.backgroundSize = "cover";
+            glyph.style.backgroundPosition = "center";
+          }
+        });
+      } else if (item.kind === "image") {
+        glyph = h("div.di-glyph", { style: { background: item.node.content } });
+      } else {
+        var ic = item.type === "dir" ? "folder"
+               : item.kind === "audio" ? "music"
+               : item.kind === "video" ? "photos" : "doc";
+        glyph = h("div.di-glyph", { html: DS.icon(ic, 22) });
+      }
       var node = h("div.di", {}, [glyph, h("div.di-label", { text: item.name })]);
       node.addEventListener("click", function () {
         DS.qsa(".di.sel", host).forEach(function (n) { n.classList.remove("sel"); });
@@ -381,6 +398,7 @@
               });
           } },
         { label: "New Note", icon: "notes", action: function () { DS.wm.open("notes"); } },
+        { label: "Import files…", icon: "plus", action: function () { DS.media.pick(); } },
         { sep: true },
         { title: "Add widget" }
       ].concat(
@@ -419,6 +437,44 @@
     });
   }
 
+  /* ───────────────────── DROP TO IMPORT ─────────────────────
+     Dropping real files anywhere on the desktop files them by kind.
+     Individual apps intercept the drop first when it lands on their
+     own stage, so dropping a video on Video Lab opens it there. */
+  function wireDrop() {
+    var veil = DS.qs("#drop-veil");
+    var depth = 0;
+
+    function hasFiles(e) {
+      var dt = e.dataTransfer;
+      if (!dt) return false;
+      return Array.prototype.indexOf.call(dt.types || [], "Files") >= 0;
+    }
+
+    window.addEventListener("dragenter", function (e) {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth += 1;
+      veil.hidden = false;
+    });
+    window.addEventListener("dragover", function (e) {
+      if (hasFiles(e)) e.preventDefault();
+    });
+    window.addEventListener("dragleave", function () {
+      depth -= 1;
+      if (depth <= 0) { depth = 0; veil.hidden = true; }
+    });
+    window.addEventListener("drop", function (e) {
+      depth = 0;
+      veil.hidden = true;
+      if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+      e.preventDefault();
+      DS.media.importFiles(e.dataTransfer.files).then(function (made) {
+        if (made.length === 1) DS.openPath(made[0].path);
+      });
+    });
+  }
+
   /* ───────────────────── LAUNCHER ───────────────────── */
   var lch = { open: false, rows: [], idx: 0 };
 
@@ -449,6 +505,11 @@
         sub: "Switch the desktop theme",
         run: function () { DS.store.set("theme", t); DS.glass.applyTheme(); }
       });
+    });
+    acts.push({
+      kind: "action", icon: "plus", title: "Import files…",
+      sub: "Images, audio and video into the file system",
+      run: function () { DS.media.pick(); }
     });
     acts.push({
       kind: "action", icon: "layers", title: "Tune the glass",
@@ -637,6 +698,7 @@
     wireDesktopMenu();
     wireLauncher();
     wireKeys();
+    wireDrop();
     shell.buildDock();
     shell.buildDesktopIcons();
     shell.paintAvatar();
