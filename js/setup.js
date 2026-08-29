@@ -450,10 +450,17 @@
       pad = DS.lock.pad({
         hint: "Enter your passcode",
         onSubmit: function (pin) {
+          // Go through the shared failure path, which is what counts the
+          // attempts and arms the cooling-off period. This screen used to
+          // shake and print its own message instead, so the limit existed
+          // in lock.js and never actually fired here.
+          if (DS.lock.attempts.isBlocked()) {
+            pad.lockOut(DS.lock.attempts.blockedFor());
+            return;
+          }
           DS.lock.verify(pin).then(function (ok) {
             if (ok) { unlock(); return; }
-            pad.shake();
-            pad.say("Incorrect passcode", true);
+            DS.lock.onFail(pad);
           });
         }
       });
@@ -461,6 +468,11 @@
       root.appendChild(h("div.lock-hint", {
         html: "Type the digits, or use the keypad"
       }));
+      // a cooling-off period that was still running when the page
+      // reloaded picks up where it left off
+      if (DS.lock.attempts.isBlocked()) {
+        pad.lockOut(DS.lock.attempts.blockedFor());
+      }
     } else {
       root.appendChild(h("button.g-btn.g-btn-accent.lock-enter", {
         html: DS.icon("power", 15) + "<span>Enter</span>"

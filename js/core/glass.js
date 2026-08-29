@@ -352,7 +352,12 @@
     hit.setAttribute("class", "hit");
     svg.appendChild(hit);
 
-    (DS.qs("#desktop") || document.body).appendChild(svg);
+    // #desktop is hidden while the greeting screen is up, so a crack
+    // appended there would never be seen. Use whatever is actually
+    // on screen.
+    var desk = DS.qs("#desktop");
+    var host = (desk && !desk.hidden) ? desk : document.body;
+    host.appendChild(svg);
     setTimeout(function () {
       if (svg.parentNode) svg.parentNode.removeChild(svg);
     }, o.hold || 1600);

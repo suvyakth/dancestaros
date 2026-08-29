@@ -34,6 +34,15 @@
   var fails = 0;
   var lockedUntil = 0;
 
+  /* The COUNT stays in memory - a reload clearing it is fine, because
+     five more guesses is not the attack worth worrying about. But the
+     active WAIT is written down, so pressing reload does not skip a
+     cooling-off period that is already running. Someone who clears
+     storage still gets past it; that is stated plainly in the pane. */
+  function blockUntil() {
+    return Math.max(lockedUntil, DS.store.get("lock.blockUntil", 0) || 0);
+  }
+
   function penalty(n) {
     if (n < 5) return 0;
     if (n < 8) return 30000;      // 30 seconds
@@ -42,14 +51,21 @@
   }
 
   var attempts = {
-    blockedFor: function () { return Math.max(0, lockedUntil - Date.now()); },
+    blockedFor: function () { return Math.max(0, blockUntil() - Date.now()); },
     isBlocked: function () { return attempts.blockedFor() > 0; },
     fails: function () { return fails; },
-    reset: function () { fails = 0; lockedUntil = 0; },
+    reset: function () {
+      fails = 0;
+      lockedUntil = 0;
+      DS.store.set("lock.blockUntil", 0);
+    },
     fail: function () {
       fails += 1;
       var wait = penalty(fails);
-      if (wait) lockedUntil = Date.now() + wait;
+      if (wait) {
+        lockedUntil = Date.now() + wait;
+        DS.store.set("lock.blockUntil", lockedUntil);
+      }
       return wait;
     },
     /** Tries left before the next cooling-off period. */

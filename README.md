@@ -389,10 +389,15 @@ sits in the same browser storage.
 ### Passcode attempt limit
 
 Five wrong tries starts a 30-second cooling-off, then a minute, then
-five. The screen cracks on each failure and the keypad counts the wait
-down in place. The counter lives in memory on purpose — persisting it
-would be theatre, since anyone who can reload can clear the storage it
-lived in.
+five. The screen cracks on each failure, the keypad freezes and counts
+the wait down in place, and the correct passcode is refused until it
+expires.
+
+The *count* stays in memory — a reload clearing it is fine, because
+five more guesses is not the attack worth worrying about. The *active
+wait* is written down, so pressing reload does not skip a cooling-off
+period already running. Someone who clears storage still gets past it,
+which is the same limit every other client-side lock has.
 
 ---
 

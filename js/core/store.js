@@ -61,7 +61,8 @@
       len: 4,
       onLock: true,            // ask on the greeting screen
       onSettings: false,       // ask before opening Settings
-      autoLockMin: 0           // 0 = never lock on idle
+      autoLockMin: 0,          // 0 = never lock on idle
+      blockUntil: 0            // an active cooling-off period, if any
     },
     motion: "full",            // "full" | "reduced" | "off"
 
