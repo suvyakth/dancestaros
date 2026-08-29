@@ -27,6 +27,7 @@
     { id: "sunset",  name: "Sunset",  hint: "Amber and rose",   sw: "linear-gradient(135deg,#fbbf24,#f43f5e 50%,#a855f7)" },
     { id: "abyss",   name: "Abyss",   hint: "Deep and cold",    sw: "linear-gradient(135deg,#22d3ee,#0e7490 50%,#0f172a)" },
     { id: "verdant", name: "Verdant", hint: "Green and lime",   sw: "linear-gradient(135deg,#a3e635,#14b8a6 50%,#065f46)" },
+    { id: "obsidian", name: "Obsidian", hint: "Dark glass",      sw: "linear-gradient(135deg,#4c1d95,#1e1b2e 50%,#000)" },
     { id: "lumen",   name: "Lumen",   hint: "Light mode",       sw: "linear-gradient(135deg,#eef4ff,#93c5fd 55%,#c084fc)" }
   ];
 
@@ -362,6 +363,8 @@
 
     function finish() {
       DS.store.set("setupDone", true);
+      DS.users.ensureFirst();
+      DS.users.syncActive();
       document.removeEventListener("keydown", onKey);
       dismiss(root, done);
     }
@@ -398,6 +401,14 @@
     var clock = setInterval(paint, 15000);
 
     var name = DS.store.get("user", "you");
+
+    /* More than one account? Offer the switch here, before anything
+       else. Their passcode is inside their own snapshot, so switching
+       reloads and their lock screen does the asking. */
+    var others = DS.users.list().filter(function (u) {
+      return u.id !== DS.users.activeId();
+    });
+
     var user = h("div.lock-user.g", {}, [
       avatarEl("md"),
       h("div.lock-hi", {}, [
@@ -411,6 +422,28 @@
     root.appendChild(timeEl);
     root.appendChild(dateEl);
     root.appendChild(user);
+
+    if (others.length) {
+      var row = h("div.lock-others");
+      others.forEach(function (u) {
+        row.appendChild(h("button.lock-other", {
+          title: "Sign in as " + u.name,
+          onclick: function (e) {
+            e.stopPropagation();
+            DS.users.switchTo(u.id);
+          }
+        }, [
+          h("div.av.av-md", {
+            text: u.glyph || "✦",
+            style: { background: DS.avatarGrad(u.grad || 0) }
+          }),
+          h("span", { text: u.name })
+        ]));
+      });
+      root.appendChild(h("div.lock-switch", {}, [
+        h("div.lock-swlabel", { text: "Or sign in as" }), row
+      ]));
+    }
 
     var pad = null;
     if (needsPin) {

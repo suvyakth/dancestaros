@@ -67,7 +67,7 @@
   font-variant-numeric: tabular-nums;
   align-self: flex-start;
   padding: 1px 5px;
-  border-radius: 99px;
+  border-radius: var(--r-pill);
 }
 .cal-cell.today .cal-num {
   color: #fff;
@@ -88,7 +88,7 @@
   gap: 5px;
   min-width: 0;
   padding: 2px 6px;
-  border-radius: 6px;
+  border-radius: var(--g-radius-2xs);
   font-size: 10.5px;
   cursor: default;
   background: color-mix(in srgb, var(--ec, #22d3ee) 22%, transparent);
@@ -106,7 +106,7 @@
 .cal-pill i {
   flex: none;
   width: 5px; height: 5px;
-  border-radius: 50%;
+  border-radius: var(--r-round);
   background: var(--ec, #22d3ee);
   box-shadow: 0 0 6px var(--ec, #22d3ee);
 }
@@ -189,7 +189,7 @@
 .cal-sitem {
   display: flex; gap: 9px; align-items: flex-start;
   padding: 7px 8px;
-  border-radius: 9px;
+  border-radius: var(--g-radius-xs);
   cursor: default;
   transition: background 150ms linear;
 }
@@ -197,7 +197,7 @@
 .cal-sitem i {
   flex: none; width: 4px; align-self: stretch;
   min-height: 26px;
-  border-radius: 99px;
+  border-radius: var(--r-pill);
   background: var(--ec, #22d3ee);
   box-shadow: 0 0 8px -1px var(--ec, #22d3ee);
 }
@@ -220,7 +220,7 @@
 .cal-swatches { display: flex; gap: 7px; }
 .cal-sw {
   width: 26px; height: 26px;
-  border-radius: 8px;
+  border-radius: var(--g-radius-xs);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .45),
               0 0 0 .5px rgb(var(--edge-hi) / .25);
   transition: transform 160ms var(--ease-back), box-shadow 180ms var(--ease);
@@ -246,7 +246,7 @@
   min-width: 0;
 }
 .wg-ev i {
-  flex: none; width: 4px; height: 4px; border-radius: 50%;
+  flex: none; width: 4px; height: 4px; border-radius: var(--r-round);
   background: var(--ec, #22d3ee);
   box-shadow: 0 0 5px var(--ec, #22d3ee);
 }
@@ -269,7 +269,7 @@
   flex: none;
   min-width: 132px;
   padding: 5px 10px;
-  border-radius: 8px;
+  border-radius: var(--g-radius-xs);
   font-size: 11.5px;
   font-weight: 600;
   text-align: center;
@@ -302,7 +302,7 @@
   bottom: 1px; left: 50%;
   width: 3px; height: 3px;
   margin-left: -1.5px;
-  border-radius: 50%;
+  border-radius: var(--r-round);
   background: hsl(var(--accent) / .9);
   box-shadow: 0 0 5px hsl(var(--accent) / .9);
 }

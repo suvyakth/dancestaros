@@ -41,7 +41,7 @@
 
   /* ───────────────────── MENU BAR MENUS ───────────────────── */
   function themeItems() {
-    return ["aurora", "sunset", "abyss", "verdant", "lumen"].map(function (t) {
+    return ["aurora", "sunset", "abyss", "verdant", "obsidian", "lumen"].map(function (t) {
       return {
         label: t.charAt(0).toUpperCase() + t.slice(1),
         icon: DS.store.get("theme") === t ? "check" : "palette",
@@ -143,6 +143,9 @@
           DS.wm.open("settings", { pane: "glass" });
         } },
       { sep: true },
+      { label: "Accounts…", icon: "home", action: function () {
+          DS.wm.open("settings", { pane: "users" });
+        } },
       { label: "Replay first-run setup", icon: "refresh", action: function () {
           DS.store.set("setupDone", false);
           location.reload();
@@ -208,12 +211,13 @@
         DS.glass.redress();
       })));
     panel.appendChild(h("div.g-sep"));
-    panel.appendChild(h("div.cc-themes", {}, ["aurora", "sunset", "abyss", "verdant", "lumen"].map(function (t) {
+    panel.appendChild(h("div.cc-themes", {}, ["aurora", "sunset", "abyss", "verdant", "obsidian", "lumen"].map(function (t) {
       var sw = {
         aurora: "linear-gradient(135deg,#22d3ee,#a855f7)",
         sunset: "linear-gradient(135deg,#fbbf24,#f43f5e)",
         abyss: "linear-gradient(135deg,#22d3ee,#0f172a)",
         verdant: "linear-gradient(135deg,#a3e635,#14b8a6)",
+        obsidian: "linear-gradient(135deg,#4c1d95,#0a0a0f)",
         lumen: "linear-gradient(135deg,#eef4ff,#93c5fd)"
       }[t];
       return h("button.cc-sw" + (DS.store.get("theme") === t ? ".on" : ""), {
@@ -341,7 +345,9 @@
     var wrap = DS.qs(".dock-wrap");
     document.addEventListener("pointermove", function (e) {
       var d = DS.store.get("dock", {});
-      if (!d.autohide) { wrap.classList.remove("peek"); return; }
+      var hidden = d.autohide ||
+        (d.hideOnMax !== false && document.body.classList.contains("has-max"));
+      if (!hidden) { wrap.classList.remove("peek"); return; }
       var pos = d.position || "bottom";
       var near =
         pos === "bottom" ? e.clientY > window.innerHeight - 26 :
@@ -737,8 +743,12 @@
     DS.actions.init();
 
     DS.store.on(function (path) {
-      if (path.indexOf("avatar") === 0 || path === "user") shell.paintAvatar();
+      if (path.indexOf("avatar") === 0 || path === "user") {
+        shell.paintAvatar();
+        DS.users.syncActive();
+      }
     });
+    DS.users.ensureFirst();
     DS.glass.applyMotion();
     DS.glass.dress(DS.qs("#desktop"));
 

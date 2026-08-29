@@ -71,7 +71,7 @@
 .lab-th {
   flex: none;
   width: 26px; height: 26px;
-  border-radius: 7px;
+  border-radius: var(--g-radius-2xs);
   background-size: cover;
   background-position: center;
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .35),
@@ -144,7 +144,7 @@
 }
 .al-vert::-webkit-slider-runnable-track {
   width: 6px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgb(var(--edge-lo) / .26);
   box-shadow: inset 0 0 3px rgb(var(--edge-lo) / .4),
               inset 0 0 0 .5px rgb(var(--edge-hi) / .2);
@@ -153,7 +153,7 @@
   -webkit-appearance: none;
   width: 16px; height: 16px;
   margin-left: -5px;
-  border-radius: 50%;
+  border-radius: var(--r-round);
   background: linear-gradient(155deg, rgb(255 255 255 / .58), rgb(255 255 255 / .16));
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / .9),
@@ -162,10 +162,10 @@
     0 2px 6px rgb(var(--edge-lo) / .4);
 }
 .al-vert::-moz-range-track {
-  width: 6px; border-radius: 999px; background: rgb(var(--edge-lo) / .26);
+  width: 6px; border-radius: var(--r-pill); background: rgb(var(--edge-lo) / .26);
 }
 .al-vert::-moz-range-thumb {
-  width: 15px; height: 15px; border: 0; border-radius: 50%;
+  width: 15px; height: 15px; border: 0; border-radius: var(--r-round);
   background: rgb(255 255 255 / .55);
   box-shadow: 0 0 0 .5px rgb(255 255 255 / .5), 0 2px 6px rgb(0 0 0 / .35);
 }
@@ -202,7 +202,7 @@
   flex: none;
   height: 22px;
   margin: 0 12px 10px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   cursor: pointer;
   background: rgb(var(--edge-lo) / .24);
   box-shadow:
@@ -212,7 +212,7 @@
 .vl-band {
   position: absolute;
   top: 0; bottom: 0;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: linear-gradient(180deg, hsl(var(--accent) / .42), hsl(var(--accent-2) / .3));
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / .35),
@@ -224,7 +224,7 @@
   top: -3px; bottom: -3px;
   width: 3px;
   margin-left: -1.5px;
-  border-radius: 99px;
+  border-radius: var(--r-pill);
   background: #fff;
   box-shadow: 0 0 10px 1px hsl(var(--accent) / .9);
   pointer-events: none;
@@ -271,7 +271,7 @@
 .drop-ico {
   width: 54px; height: 54px;
   margin-bottom: 6px;
-  border-radius: 16px;
+  border-radius: var(--g-radius-sm);
   background: linear-gradient(150deg, hsl(var(--accent) / .55), hsl(var(--accent-2) / .4));
   box-shadow:
     inset 0 1.5px 0 rgb(255 255 255 / .45),
@@ -282,3 +282,147 @@
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-7px); }
 }
+
+
+/* ───────────────── CROP ───────────────── */
+.il-stage { position: relative; }
+.il-crop {
+  position: absolute;
+  pointer-events: none;
+  border-radius: var(--g-radius-2xs);
+  box-shadow:
+    0 0 0 1.5px rgb(255 255 255 / .95),
+    0 0 0 100vmax rgb(0 0 0 / .5);
+}
+.il-crop::before, .il-crop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 33.33%, rgb(255 255 255 / .3) 33.33% 33.5%,
+      transparent 33.5% 66.6%, rgb(255 255 255 / .3) 66.6% 66.8%, transparent 66.8%);
+}
+.il-crop::after {
+  background:
+    linear-gradient(180deg, transparent 33.33%, rgb(255 255 255 / .3) 33.33% 33.5%,
+      transparent 33.5% 66.6%, rgb(255 255 255 / .3) 66.6% 66.8%, transparent 66.8%);
+}
+.il-cropbar {
+  position: absolute;
+  left: 50%; bottom: 14px;
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r-pill);
+  background: rgb(var(--g-tint) / .16);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--g-inset), var(--shadow-deep);
+  z-index: 5;
+}
+.il-cropdim {
+  font-size: 11.5px; color: var(--text-2);
+  font-variant-numeric: tabular-nums; padding: 0 4px;
+}
+
+/* ───────────────── PHOTOS EDIT BAR ───────────────── */
+.ph-edit {
+  display: flex; gap: 7px; justify-content: center;
+  flex-wrap: wrap; margin-top: 12px;
+}
+
+/* ───────────────── SEARCH ───────────────── */
+.se-col { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.se-bar {
+  flex: none; display: flex; align-items: center; gap: 12px;
+  padding: 4px 18px; height: 58px;
+  box-shadow: inset 0 -1px 0 rgb(var(--edge-hi) / .12);
+}
+.se-bar > span { opacity: .5; display: flex; }
+.se-input {
+  flex: 1; border: 0; outline: 0; background: transparent;
+  font-size: 17px; font-weight: 350; color: var(--text);
+  user-select: text;
+}
+.se-input::placeholder { color: var(--text-3); }
+
+.se-chips { flex: none; display: flex; gap: 6px; padding: 10px 14px 4px; flex-wrap: wrap; }
+.se-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: var(--r-pill);
+  font-size: 11px; color: var(--text-2);
+  background: rgb(var(--edge-hi) / .08);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .16);
+  transition: all 150ms var(--ease);
+}
+.se-chip:hover { color: var(--text); background: rgb(var(--edge-hi) / .14); }
+.se-chip i {
+  font-style: normal; font-size: 9.5px; opacity: .7;
+  font-variant-numeric: tabular-nums;
+}
+.se-chip.on {
+  color: #fff;
+  background: linear-gradient(120deg, hsl(var(--accent) / .55), hsl(var(--accent-2) / .4));
+  box-shadow: inset 0 1px 0 rgb(var(--edge-hi) / .3),
+              0 0 14px -4px hsl(var(--accent) / .7);
+}
+
+.se-results { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 10px 10px; }
+.se-hit {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 10px; border-radius: var(--g-radius-xs);
+  cursor: default;
+  transition: background 140ms linear;
+}
+.se-hit:hover { background: rgb(var(--edge-hi) / .1); }
+.se-txt { flex: 1; min-width: 0; }
+.se-txt b {
+  display: block; font-size: 13px; font-weight: 550;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.se-txt i {
+  display: block; font-size: 11px; font-style: normal; color: var(--text-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px;
+}
+.se-hit mark {
+  background: hsl(var(--accent) / .32);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+  box-shadow: inset 0 0 0 .5px hsl(var(--accent) / .5);
+}
+.se-score {
+  font-size: 9.5px; color: var(--text-3); opacity: .55;
+  font-variant-numeric: tabular-nums;
+}
+.se-web {
+  flex: none;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 11px 16px;
+  box-shadow: inset 0 1px 0 rgb(var(--edge-hi) / .1);
+}
+.se-web > span { font-size: 12px; color: var(--text-2); }
+.se-engines { display: flex; gap: 6px; flex-wrap: wrap; }
+.se-engines .g-btn { height: 26px; padding: 0 11px; font-size: 11.5px; }
+.se-web i {
+  flex-basis: 100%;
+  font-size: 10.5px; font-style: normal; color: var(--text-3); line-height: 1.5;
+}
+
+/* ───────────────── GLASS FORGE ───────────────── */
+.fg-stage {
+  position: relative;
+  flex: 1; min-height: 0;
+  overflow: hidden;
+  display: grid; place-items: center;
+  /* deliberately NO background: finished glass is transparent, so the
+     window's own backdrop shows through what you make */
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .1);
+  cursor: crosshair;
+}
+.fg-canvas { display: block; image-rendering: pixelated; }
+.fg-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.fg-tools .g-btn { flex: 1; min-width: 64px; height: 28px; font-size: 11.5px; }
+
+/* the shell prompt while it is waiting for an answer */
+.tm-prompt.asking i { color: hsl(var(--ok) / 1); }

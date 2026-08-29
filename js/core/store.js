@@ -66,7 +66,11 @@
     motion: "full",            // "full" | "reduced" | "off"
 
     /* dock */
-    dock: { size: 46, position: "bottom", magnify: true, autohide: false },
+    dock: {
+      size: 46, position: "bottom", magnify: true,
+      autohide: false,
+      hideOnMax: true      // step aside when a window is maximised
+    },
 
     /* wallpaper studio — when custom is true these override the theme */
     wallpaper: {
@@ -102,9 +106,9 @@
       chime: true,
       sessions: []             // { start, ms, mode }
     },
-    dockApps: ["finder", "notes", "calendar", "terminal", "focus", "clock",
-               "calc", "music", "photos", "imagelab", "audiolab", "videolab",
-               "settings", "about"],
+    dockApps: ["finder", "search", "notes", "calendar", "terminal", "focus",
+               "clock", "calc", "music", "photos", "imagelab", "audiolab",
+               "videolab", "forge", "settings", "about"],
     user: "you",
     fs: null,
     volume: 65,

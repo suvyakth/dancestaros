@@ -15,6 +15,24 @@
   var mounted = {};      // id -> { el, def, rec }
   var ticker = null;
 
+  /* ── THE FLICKER FIX ────────────────────────────────────────────
+     Widgets flickered once a second, worst on the ones showing live
+     numbers. The cause was not the values changing - it was writing
+     them when they had not.
+
+     Every tick reassigned textContent whether or not the text
+     differed. Each of those writes dirties the element, and because a
+     widget sits behind a backdrop-filter, dirtying anything inside it
+     makes the compositor re-sample the whole blurred backdrop. Once a
+     second, forever, on every widget at once.
+
+     So: never write text that already says what it should. The clock
+     widget now touches the DOM twice a minute instead of sixty times. */
+  function setText(el, value) {
+    var v = String(value);
+    if (el.textContent !== v) el.textContent = v;
+  }
+
   /* ───────────────────── WIDGET TYPES ───────────────────── */
   var TYPES = {};
 
@@ -29,17 +47,18 @@
       el.appendChild(h("div.wg-date"));
       el.appendChild(h("div.wg-sub"));
     },
+    open: "clock",
     tick: function (el) {
       var d = new Date();
-      el.children[0].textContent = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-      el.children[1].textContent = d.toLocaleDateString([], {
+      setText(el.children[0], d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+      setText(el.children[1], d.toLocaleDateString([], {
         weekday: "long", day: "numeric", month: "long"
-      });
+      }));
       var next = DS.alarms.next();
-      el.children[2].textContent = next
+      setText(el.children[2], next
         ? "Alarm " + DS.alarms.pad2(next.alarm.h) + ":" + DS.alarms.pad2(next.alarm.m) +
           " · " + DS.until(next.at - Date.now())
-        : "No alarms set";
+        : "No alarms set");
     }
   };
 
@@ -48,6 +67,7 @@
     label: "Calendar",
     icon: "grid",
     desc: "This month, today marked, and what is on.",
+    open: "calendar",
     w: 232, h: 268,
     build: function (el) {
       el.appendChild(h("div.wg-cal-head"));
@@ -61,7 +81,7 @@
       if (el._key === key && !force) return;
       el._key = key;
 
-      el.children[0].textContent = now.toLocaleDateString([], { month: "long", year: "numeric" });
+      setText(el.children[0], now.toLocaleDateString([], { month: "long", year: "numeric" }));
       var grid = el.children[1];
       DS.clear(grid);
       ["M", "T", "W", "T", "F", "S", "S"].forEach(function (d) {
@@ -112,6 +132,7 @@
     label: "Focus",
     icon: "star",
     desc: "Flowmodoro control, without opening the app.",
+    open: "focus",
     w: 208, h: 158,
     build: function (el, api) {
       var ring = h("div.wg-ring", { html:
@@ -134,13 +155,15 @@
       var C = 2 * Math.PI * 19;
       fg.style.strokeDasharray = C;
 
+      var lastIcon = null;
       api.unsub = DS.focus.on(function (s) {
-        time.textContent = s.display;
-        lab.textContent = s.label + (s.countingUp && s.phase === "focus"
-          ? " · earns " + DS.hms(DS.focus.breakFor(s.elapsed)) : "");
+        setText(time, s.display);
+        setText(lab, s.label + (s.countingUp && s.phase === "focus"
+          ? " · earns " + DS.hms(DS.focus.breakFor(s.elapsed)) : ""));
         fg.style.strokeDashoffset = C * (1 - s.progress);
-        el.dataset.phase = s.phase;
-        go.innerHTML = DS.icon(s.running ? "pause" : "play", 14);
+        if (el.dataset.phase !== s.phase) el.dataset.phase = s.phase;
+        var want = s.running ? "pause" : "play";
+        if (want !== lastIcon) { lastIcon = want; go.innerHTML = DS.icon(want, 14); }
         brk.disabled = s.phase === "idle";
       });
     },
@@ -152,6 +175,7 @@
     label: "Sticky note",
     icon: "notes",
     desc: "A scrap of glass you can write on.",
+    open: "notes",
     w: 224, h: 176,
     build: function (el, api) {
       var ta = h("textarea.wg-sticky", {
@@ -176,6 +200,7 @@
     label: "System",
     icon: "cpu",
     desc: "Frame rate, windows, glass surfaces, storage.",
+    open: "about",
     w: 208, h: 148,
     build: function (el, api) {
       ["Frame rate", "Windows", "Glass panes", "Stored"].forEach(function (k) {
@@ -202,7 +227,7 @@
         String(DS.qsa(".g, .g-btn, .dk, .di-glyph, .widget").length),
         DS.bytes(raw.length)
       ];
-      DS.qsa(".wg-kv b", el).forEach(function (b, i) { b.textContent = vals[i]; });
+      DS.qsa(".wg-kv b", el).forEach(function (b, i) { setText(b, vals[i]); });
     },
     destroy: function (el, api) { if (api.raf) cancelAnimationFrame(api.raf); }
   };
@@ -212,6 +237,7 @@
     label: "Now playing",
     icon: "music",
     desc: "What Music is doing, and a play button.",
+    open: "music",
     w: 224, h: 96,
     build: function (el) {
       el.appendChild(h("div.wg-np", {}, [
@@ -232,17 +258,17 @@
       var b = DS.qs(".wg-npc b", el);
       var i = DS.qs(".wg-npc i", el);
       var btn = DS.qs(".wg-npb", el);
+      var wantIcon = np && np.playing ? "pause" : "play";
+      if (btn._icon !== wantIcon) { btn._icon = wantIcon; btn.innerHTML = DS.icon(wantIcon, 14); }
       if (!np) {
-        b.textContent = "Music is closed";
-        i.textContent = "Click to open it";
-        art.style.background = "rgb(var(--edge-hi) / .12)";
-        btn.innerHTML = DS.icon("play", 14);
+        setText(b, "Music is closed");
+        setText(i, "Click to open it");
+        if (art._bg !== "none") { art._bg = "none"; art.style.background = "rgb(var(--edge-hi) / .12)"; }
         return;
       }
-      b.textContent = np.title;
-      i.textContent = np.artist;
-      art.style.background = np.art;
-      btn.innerHTML = DS.icon(np.playing ? "pause" : "play", 14);
+      setText(b, np.title);
+      setText(i, np.artist);
+      if (art._bg !== np.art) { art._bg = np.art; art.style.background = np.art; }
     }
   };
 
@@ -293,6 +319,7 @@
     if (!rec.data) rec.data = {};
     def.build(bodyEl, api);
 
+    el.title = def.open ? "Click to open " + (DS.apps.get(def.open) || {}).name : "";
     el.addEventListener("contextmenu", function (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -306,7 +333,7 @@
       ]);
     });
 
-    initDrag(el, rec);
+    initDrag(el, rec, def);
     layer().appendChild(el);
     mounted[rec.id] = { el: el, body: bodyEl, def: def, rec: rec, api: api };
     DS.glass.dress(el);
@@ -314,7 +341,7 @@
     return el;
   }
 
-  function initDrag(el, rec) {
+  function initDrag(el, rec, def) {
     el.addEventListener("pointerdown", function (e) {
       if (e.button !== 0) return;
       if (e.target.closest("button, input, textarea, a")) return;
@@ -337,13 +364,20 @@
         el.style.left = rec.x + "px";
         el.style.top = rec.y + "px";
       }
-      function up() {
+      function up(ev) {
         el.removeEventListener("pointermove", move);
         el.removeEventListener("pointerup", up);
         el.removeEventListener("pointercancel", up);
         el.classList.remove("dragging");
         DS.glass.lite(false);
-        if (moved) persist();
+        if (moved) { persist(); return; }
+
+        // A click that never became a drag opens the full app, so a
+        // widget is a way into its window rather than a dead end.
+        if (ev && ev.type === "pointerup" && def && def.open &&
+            !ev.target.closest("button, input, textarea, a")) {
+          DS.wm.open(def.open);
+        }
       }
       el.addEventListener("pointermove", move);
       el.addEventListener("pointerup", up);

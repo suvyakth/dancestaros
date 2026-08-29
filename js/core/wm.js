@@ -237,6 +237,7 @@
       }
       wm.syncDock();
       wm.restack();
+      wm.syncMax();
     }, 200);
   };
 
@@ -246,6 +247,7 @@
       win.hidden = true;
       win.classList.remove("minimizing");
       win._minimized = true;
+      wm.syncMax();
       if (focused === win) {
         focused = null;
         var next = wins.filter(function (w) { return !w._minimized; }).pop();
@@ -262,6 +264,14 @@
     void win.offsetWidth;
     win.style.animation = "winOpen 300ms var(--ease-back)";
     wm.focus(win);
+  };
+
+  /** Any window maximised? The dock uses this to step aside. */
+  wm.syncMax = function () {
+    var any = wins.some(function (w) {
+      return !w._minimized && w.classList.contains("maximized");
+    });
+    document.body.classList.toggle("has-max", any);
   };
 
   wm.toggleMax = function (win) {
@@ -281,6 +291,7 @@
       win.style.width = b.width + "px";
       win.style.height = b.height + "px";
     }
+    wm.syncMax();
     if (win._app.onResize) win._app.onResize(win._api);
   };
 
@@ -393,6 +404,7 @@
           }
           if (win._app.onResize) win._app.onResize(win._api);
         }
+        wm.syncMax();
       }
 
       bar.addEventListener("pointermove", move);

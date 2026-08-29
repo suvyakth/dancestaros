@@ -145,7 +145,7 @@
       });
     });
 
-    ["aurora", "sunset", "abyss", "verdant", "lumen"].forEach(function (t) {
+    ["aurora", "sunset", "abyss", "verdant", "obsidian", "lumen"].forEach(function (t) {
       actions.register({
         id: "theme:" + t,
         label: "Theme: " + t.charAt(0).toUpperCase() + t.slice(1),

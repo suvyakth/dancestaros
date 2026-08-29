@@ -87,6 +87,17 @@
     ctx.fillRect(0, 0, w, hgt);
   }
 
+  /* Photos needs this to turn a seeded gradient into real pixels. */
+  DS.imageTools = {
+    rasterise: function (node, w, hgt) {
+      var c = document.createElement("canvas");
+      c.width = w; c.height = hgt;
+      drawGradient(c.getContext("2d"), node.content, w, hgt);
+      return c;
+    },
+    drawGradient: drawGradient
+  };
+
   DS.apps.register({
     id: "imagelab",
     name: "Image Lab",
@@ -108,9 +119,24 @@
       var side = h("aside.app-side");
       var canvas = h("canvas.lab-canvas");
       var ctx = canvas.getContext("2d");
-      var stage = h("div.lab-stage", {}, [canvas]);
+      var stage = h("div.lab-stage.il-stage", {}, [canvas]);
       var panel = h("div.lab-panel");
       var status = h("div.app-statusbar");
+
+      /* declared up here because the stage is assembled below, and a
+         `var` further down would still be undefined at that point */
+      var cropBox = h("div.il-crop", { hidden: true });
+      var cropBar = h("div.il-cropbar", { hidden: true }, [
+        h("span.il-cropdim"),
+        h("button.g-btn", {
+          text: "Cancel",
+          onclick: function () { crop = null; paintCrop(); }
+        }),
+        h("button.g-btn.g-btn-accent", {
+          html: DS.icon("check", 14) + "<span>Crop</span>",
+          onclick: function () { applyCrop(); }
+        })
+      ]);
 
       var toolbar = h("div.app-toolbar", {}, [
         h("button.g-btn", {
@@ -140,6 +166,8 @@
         })
       ]);
 
+      stage.appendChild(cropBox);
+      stage.appendChild(cropBar);
       body.appendChild(side);
       body.appendChild(h("div.lab-col", {}, [toolbar, stage, status]));
       body.appendChild(panel);
@@ -203,10 +231,94 @@
 
       function srcSize() {
         if (!st.source) return { w: 0, h: 0 };
-        return st.source.gradient
-          ? { w: st.source.w, h: st.source.h }
-          : { w: st.source.naturalWidth, h: st.source.naturalHeight };
+        if (st.source.gradient) return { w: st.source.w, h: st.source.h };
+        return {
+          w: st.source.naturalWidth || st.source.width,
+          h: st.source.naturalHeight || st.source.height
+        };
       }
+
+      /* ── CROP ────────────────────────────────────────────────────
+         Drag a box on the canvas, then bake it. The crop is applied to
+         the *source*, not to the filtered output, so every adjustment
+         stays live and undoable afterwards. */
+      var crop = null;
+
+      function paintCrop() {
+        if (!crop || crop.w < 4 || crop.h < 4) {
+          cropBox.hidden = true;
+          cropBar.hidden = true;
+          return;
+        }
+        var r = canvas.getBoundingClientRect();
+        var sr = stage.getBoundingClientRect();
+        var sx = r.width / canvas.width;
+        var sy = r.height / canvas.height;
+        cropBox.hidden = false;
+        cropBar.hidden = false;
+        cropBox.style.left = (r.left - sr.left + crop.x * sx) + "px";
+        cropBox.style.top = (r.top - sr.top + crop.y * sy) + "px";
+        cropBox.style.width = (crop.w * sx) + "px";
+        cropBox.style.height = (crop.h * sy) + "px";
+        DS.qs(".il-cropdim", cropBar).textContent =
+          Math.round(crop.w) + " × " + Math.round(crop.h);
+      }
+
+      function applyCrop() {
+        if (!crop || !st.source) return;
+        var s2 = srcSize();
+        var off = document.createElement("canvas");
+        off.width = Math.round(crop.w);
+        off.height = Math.round(crop.h);
+        var octx = off.getContext("2d");
+
+        // redraw the untouched source, offset so the crop lands at 0,0
+        octx.save();
+        octx.translate(-crop.x, -crop.y);
+        octx.translate(canvas.width / 2, canvas.height / 2);
+        octx.rotate(st.rot * Math.PI / 180);
+        octx.scale(st.flipH ? -1 : 1, st.flipV ? -1 : 1);
+        var src = st.source.gradient
+          ? DS.imageTools.rasterise({ content: st.source.gradient }, s2.w, s2.h)
+          : st.source;
+        octx.drawImage(src, -s2.w / 2, -s2.h / 2);
+        octx.restore();
+
+        st.source = off;          // a canvas is a perfectly good image source
+        st.rot = 0;
+        st.flipH = false;
+        st.flipV = false;
+        crop = null;
+        paintCrop();
+        draw();
+        DS.ui.toast({ icon: "image", title: "Cropped",
+                      body: off.width + " × " + off.height });
+      }
+
+      /* drag on the canvas to mark a crop */
+      canvas.addEventListener("pointerdown", function (e) {
+        if (!st.source) return;
+        var r = canvas.getBoundingClientRect();
+        var sx = canvas.width / r.width, sy = canvas.height / r.height;
+        var ox = (e.clientX - r.left) * sx, oy = (e.clientY - r.top) * sy;
+        canvas.setPointerCapture(e.pointerId);
+
+        function move(ev) {
+          var cx = DS.clamp((ev.clientX - r.left) * sx, 0, canvas.width);
+          var cy = DS.clamp((ev.clientY - r.top) * sy, 0, canvas.height);
+          crop = {
+            x: Math.min(ox, cx), y: Math.min(oy, cy),
+            w: Math.abs(cx - ox), h: Math.abs(cy - oy)
+          };
+          paintCrop();
+        }
+        function up() {
+          canvas.removeEventListener("pointermove", move);
+          canvas.removeEventListener("pointerup", up);
+        }
+        canvas.addEventListener("pointermove", move);
+        canvas.addEventListener("pointerup", up);
+      });
 
       function fit() {
         var s = srcSize();
@@ -259,8 +371,10 @@
           ctx.fillRect(0, 0, W, H);
         }
 
+        paintCrop();
         DS.clear(status);
         status.appendChild(h("span", { text: st.name }));
+        status.appendChild(h("span.g-chip", { text: "drag to crop" }));
         status.appendChild(h("span", { style: { flex: "1" } }));
         status.appendChild(h("span", { text: W + " × " + H + " px" }));
         if (st.rot) status.appendChild(h("span.g-chip", { text: st.rot + "°" }));
@@ -293,7 +407,7 @@
         panel.appendChild(h("div.lab-presets", {}, [
           h("button.g-btn", {
             html: DS.icon("refresh", 14) + "<span>Rotate</span>",
-            onclick: function () { st.rot = (st.rot + 90) % 360; draw(); }
+            onclick: function () { st.rot = (st.rot + 90) % 360; crop = null; draw(); }
           }),
           h("button.g-btn", {
             text: "Flip H",

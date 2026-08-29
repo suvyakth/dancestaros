@@ -23,6 +23,12 @@
   box-shadow: var(--g-inset), var(--shadow-lift);
   animation: wgIn 400ms var(--ease-back);
   transition: box-shadow 220ms var(--ease), transform 180ms var(--ease);
+
+  /* Hold the widget on its own compositor layer and keep its repaints
+     inside itself. Together with the diffed writes in widgets.js this
+     is what stopped the once-a-second flicker. */
+  contain: paint;
+  backface-visibility: hidden;
 }
 @keyframes wgIn { from { opacity: 0; transform: scale(.9) translateY(10px); } }
 .widget:hover { box-shadow: var(--g-inset), var(--shadow-deep); }
@@ -78,7 +84,7 @@
   place-items: center;
   font-size: 10.5px;
   font-style: normal;
-  border-radius: 6px;
+  border-radius: var(--g-radius-2xs);
   color: var(--text-2);
   font-variant-numeric: tabular-nums;
 }
@@ -152,7 +158,7 @@
 .wg-art {
   flex: none;
   width: 44px; height: 44px;
-  border-radius: 10px;
+  border-radius: var(--g-radius-xs);
   background: rgb(var(--edge-hi) / .12);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .35),
               0 0 0 .5px rgb(var(--edge-hi) / .22);

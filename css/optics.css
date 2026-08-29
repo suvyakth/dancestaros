@@ -176,7 +176,7 @@ html[data-depth="on"] .win {
   position: absolute;
   z-index: 620;
   pointer-events: none;
-  border-radius: 2px;
+  border-radius: var(--g-radius-2xs);
   background: rgb(255 255 255 / .07);
   backdrop-filter: blur(7px) saturate(170%) brightness(1.1);
   -webkit-backdrop-filter: blur(7px) saturate(170%) brightness(1.1);
@@ -199,3 +199,50 @@ html[data-depth="on"] .win {
 /* perf mode drops the expensive extras first */
 html.perf-lite .g-finish { backdrop-filter: none !important; }
 html.perf-lite .wallpaper::after { display: none; }
+
+
+/* ═══════════════ CRACKS ═══════════════
+   Drawn over everything, never actually breaking anything. The white
+   core with a coloured halo is what a real fracture does to light:
+   the split faces refract slightly differently on each side. */
+.crack {
+  position: absolute;
+  inset: 0;
+  z-index: 8800;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  animation: crackIn 1.6s var(--ease) forwards;
+}
+.crack path {
+  fill: none;
+  stroke: rgb(255 255 255 / .92);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter:
+    drop-shadow(0 0 2px rgb(255 255 255 / .9))
+    drop-shadow(1.5px 0 3px rgb(var(--refract-cool) / .8))
+    drop-shadow(-1.5px 0 3px rgb(var(--refract-warm) / .7));
+  stroke-dasharray: 1400;
+  stroke-dashoffset: 1400;
+  animation: crackDraw 260ms cubic-bezier(.2,.9,.3,1) forwards;
+}
+.crack .hit {
+  fill: rgb(255 255 255 / .5);
+  filter: blur(7px);
+  animation: crackHit 700ms var(--ease) forwards;
+}
+@keyframes crackDraw { to { stroke-dashoffset: 0; } }
+@keyframes crackHit {
+  0% { opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(.3); }
+  22% { opacity: 1; }
+  100% { opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(1.9); }
+}
+@keyframes crackIn {
+  0%, 62% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* the keypad, frozen during a cooling-off period */
+.pin.locked .pin-grid { opacity: .32; pointer-events: none; filter: saturate(.3); }
+.pin.locked .pin-dots i { background: hsl(var(--danger) / .3); }

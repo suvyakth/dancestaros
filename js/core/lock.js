@@ -22,6 +22,40 @@
   /* one-shot session grants, cleared whenever the screen locks */
   var granted = {};
 
+  /* ── ATTEMPT LIMIT ────────────────────────────────────────────
+     Guessing a 4-digit code is 10,000 tries, which is nothing at
+     machine speed and not much by hand either. A cooling-off period
+     after a run of failures makes that materially slower without
+     ever locking the real owner out for long.
+
+     The counter lives in memory on purpose: it survives the lock
+     screen, but not a reload. Persisting it would be theatre, since
+     anyone who can reload can also clear the storage it lived in. */
+  var fails = 0;
+  var lockedUntil = 0;
+
+  function penalty(n) {
+    if (n < 5) return 0;
+    if (n < 8) return 30000;      // 30 seconds
+    if (n < 11) return 60000;
+    return 300000;                // five minutes
+  }
+
+  var attempts = {
+    blockedFor: function () { return Math.max(0, lockedUntil - Date.now()); },
+    isBlocked: function () { return attempts.blockedFor() > 0; },
+    fails: function () { return fails; },
+    reset: function () { fails = 0; lockedUntil = 0; },
+    fail: function () {
+      fails += 1;
+      var wait = penalty(fails);
+      if (wait) lockedUntil = Date.now() + wait;
+      return wait;
+    },
+    /** Tries left before the next cooling-off period. */
+    left: function () { return Math.max(0, 5 - fails); }
+  };
+
   function randomSalt() {
     var a = new Uint8Array(16);
     if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(a);
@@ -73,12 +107,31 @@
       });
     },
 
+    attempts: attempts,
+
     verify: function (pin) {
       if (!lock.isSet()) return Promise.resolve(true);
+      if (attempts.isBlocked()) return Promise.resolve(false);
       var salt = DS.store.get("lock.salt", "");
       return digest(salt + ":" + pin).then(function (hh) {
-        return hh === DS.store.get("lock.hash", null);
+        var ok = hh === DS.store.get("lock.hash", null);
+        if (ok) attempts.reset();
+        return ok;
       });
+    },
+
+    /** Wrap a failure: count it, crack the screen, describe the wait. */
+    onFail: function (pad) {
+      var wait = attempts.fail();
+      pad.shake();
+      if (DS.glass.crack) DS.glass.crack();
+      if (wait) {
+        pad.lockOut(wait);
+      } else {
+        var left = attempts.left();
+        pad.say("Incorrect passcode" +
+          (left <= 2 ? " · " + left + " left before a wait" : ""), true);
+      }
     },
 
     clear: function () {
@@ -130,6 +183,7 @@
       }
 
       function push(d) {
+        if (el.classList.contains("locked")) return;
         if (value.length >= len) return;
         value += d;
         paintDots();
@@ -174,9 +228,32 @@
         onKey(e);
       }
 
+      var countdown = null;
       var api = {
         el: el,
         reset: function () { value = ""; paintDots(); },
+
+        /** Freeze the keypad and count the wait down in place. */
+        lockOut: function (ms) {
+          var until = Date.now() + ms;
+          el.classList.add("locked");
+          value = "";
+          paintDots();
+          if (countdown) clearInterval(countdown);
+          function paint() {
+            var left = Math.ceil((until - Date.now()) / 1000);
+            if (left <= 0) {
+              clearInterval(countdown);
+              countdown = null;
+              el.classList.remove("locked");
+              api.say("Try again", false);
+              return;
+            }
+            api.say("Too many attempts · wait " + left + "s", true);
+          }
+          paint();
+          countdown = setInterval(paint, 250);
+        },
         say: function (text, bad) {
           msg.textContent = text;
           msg.classList.toggle("bad", !!bad);
@@ -204,19 +281,16 @@
     challenge: function (opts) {
       var o = opts || {};
       return new Promise(function (resolve) {
-        var tries = 0;
         var veil = h("div.dlg-veil");
         var panel = h("div.dlg.pin-dlg.g");
 
         var pad = lock.pad({
           hint: o.hint || "Enter your passcode",
           onSubmit: function (pin) {
+            if (attempts.isBlocked()) { pad.lockOut(attempts.blockedFor()); return; }
             lock.verify(pin).then(function (ok) {
               if (ok) { done(true); return; }
-              tries += 1;
-              pad.shake();
-              pad.say(tries >= 3 ? "Still not right. Passcodes are digits only."
-                                 : "Incorrect passcode", true);
+              lock.onFail(pad);
             });
           }
         });

@@ -61,6 +61,106 @@
       }));
       stage.appendChild(stageCap);
 
+      /* ── in-place editing, the way a gallery should have it ──
+         Rotate and flip are live on the element. Anything that needs
+         real pixels hands off to Image Lab, which already knows how to
+         rasterise a seeded gradient. */
+      var view = { rot: 0, flipH: false };
+
+      function applyView() {
+        stageImg.style.transform =
+          "rotate(" + view.rot + "deg) scaleX(" + (view.flipH ? -1 : 1) + ")";
+      }
+
+      function editBar() {
+        return h("div.ph-edit", {}, [
+          h("button.g-btn.g-btn-sq", {
+            html: DS.icon("refresh", 14), title: "Rotate left",
+            onclick: function () { view.rot = (view.rot + 270) % 360; applyView(); }
+          }),
+          h("button.g-btn.g-btn-sq", {
+            html: DS.icon("refresh", 14, 'style="transform:scaleX(-1)"'),
+            title: "Rotate right",
+            onclick: function () { view.rot = (view.rot + 90) % 360; applyView(); }
+          }),
+          h("button.g-btn", {
+            text: "Flip",
+            onclick: function () { view.flipH = !view.flipH; applyView(); }
+          }),
+          h("button.g-btn", {
+            html: DS.icon("save", 14) + "<span>Save copy</span>",
+            title: "Write the rotation out as a new picture",
+            onclick: saveRotated
+          }),
+          h("button.g-btn", {
+            html: DS.icon("sliders", 14) + "<span>Crop</span>",
+            onclick: function () {
+              DS.wm.open("imagelab", { path: items[viewing].path });
+              DS.ui.toast({
+                icon: "sliders", title: "Image Lab",
+                body: "Drag a box on the picture to crop it."
+              });
+            }
+          }),
+          h("button.g-btn.g-btn-accent", {
+            html: DS.icon("image", 14) + "<span>Edit</span>",
+            onclick: function () {
+              DS.wm.open("imagelab", { path: items[viewing].path });
+            }
+          })
+        ]);
+      }
+
+      function sourceFor(item) {
+        if (!item.media) {
+          return Promise.resolve(DS.imageTools.rasterise(item.node, 1400, 1050));
+        }
+        return DS.media.url(item.media).then(function (u) {
+          return new Promise(function (res, rej) {
+            var img = new Image();
+            img.onload = function () { res(img); };
+            img.onerror = rej;
+            img.src = u;
+          });
+        });
+      }
+
+      function saveRotated() {
+        var item = items[viewing];
+        if (!item) return;
+        if (!view.rot && !view.flipH) {
+          return DS.ui.toast({ icon: "info", title: "Nothing changed",
+                               body: "Rotate or flip it first." });
+        }
+        sourceFor(item).then(function (src) {
+          var sw = src.naturalWidth || src.width;
+          var sh = src.naturalHeight || src.height;
+          var swap = view.rot % 180 !== 0;
+          var c = document.createElement("canvas");
+          c.width = swap ? sh : sw;
+          c.height = swap ? sw : sh;
+          var cx = c.getContext("2d");
+          cx.translate(c.width / 2, c.height / 2);
+          cx.rotate(view.rot * Math.PI / 180);
+          cx.scale(view.flipH ? -1 : 1, 1);
+          cx.drawImage(src, -sw / 2, -sh / 2);
+          c.toBlob(function (blob) {
+            DS.media.save(blob, DIR,
+              DS.media.baseOf(item.name) + " rotated.png", "image")
+              .then(function (p) {
+                view.rot = 0; view.flipH = false;
+                applyView();
+                load();
+                paintGrid();
+                DS.ui.toast({ icon: "image", title: "Saved to Pictures",
+                              body: fs.basename(p) });
+              });
+          }, "image/png");
+        });
+      }
+
+      stage.appendChild(editBar());
+
       body.appendChild(h("div.ph-col", {}, [toolbar, grid, stage]));
 
       function load() {
@@ -133,6 +233,8 @@
         var item = items[viewing];
         stageImg.style.background = "";
         stageImg.style.backgroundImage = "";
+        view.rot = 0; view.flipH = false;
+        applyView();
         paint(stageImg, item);
         DS.clear(stageCap);
         stageCap.appendChild(h("b", { text: item.name }));

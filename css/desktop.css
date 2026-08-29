@@ -32,7 +32,7 @@
   font-size: 12.5px;
   font-weight: 500;
   color: var(--text-2);
-  border-radius: 6px;
+  border-radius: var(--g-radius-2xs);
 }
 .mb-item:hover { color: var(--text); }
 .mb-logo { padding: 0 8px; }
@@ -71,7 +71,7 @@
   gap: 10px;
   height: 27px;
   padding: 0 9px;
-  border-radius: 7px;
+  border-radius: var(--g-radius-2xs);
   font-size: 12.5px;
   color: var(--text);
   white-space: nowrap;
@@ -137,7 +137,7 @@
   position: relative;
   width: 46px; height: 46px;
   display: grid; place-items: center;
-  border-radius: 13px;
+  border-radius: var(--g-radius-sm);
   color: var(--text);
   background: linear-gradient(155deg,
     rgb(var(--g-tint) / .22), rgb(var(--g-tint) / .05) 55%, rgb(var(--g-tint) / .16));
@@ -178,7 +178,7 @@
   gap: 7px;
   height: var(--dock-h);
   padding: 8px 10px;
-  border-radius: 22px;
+  border-radius: var(--g-radius);
   --g-blur: 28px;
   --g-alpha: .1;
   box-shadow:
@@ -199,7 +199,7 @@
   width: 46px; height: 46px;
   display: grid;
   place-items: center;
-  border-radius: 13px;
+  border-radius: var(--g-radius-sm);
   color: var(--text);
   background: linear-gradient(155deg,
     rgb(var(--g-tint) / .20), rgb(var(--g-tint) / .04) 55%, rgb(var(--g-tint) / .15));
@@ -231,7 +231,7 @@
   bottom: -5px; left: 50%;
   width: 4px; height: 4px;
   margin-left: -2px;
-  border-radius: 50%;
+  border-radius: var(--r-round);
   background: rgb(var(--edge-hi) / .8);
   box-shadow: 0 0 6px rgb(var(--edge-hi) / .8);
   opacity: 0;
@@ -245,7 +245,7 @@
   left: 50%;
   transform: translateX(-50%) translateY(4px);
   padding: 4px 10px;
-  border-radius: 8px;
+  border-radius: var(--g-radius-xs);
   font-size: 11.5px;
   white-space: nowrap;
   color: var(--text);
@@ -331,14 +331,14 @@
   align-items: center;
   gap: 12px;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: var(--g-radius-xs);
   cursor: default;
 }
 .lch-row .li {
   flex: none;
   width: 30px; height: 30px;
   display: grid; place-items: center;
-  border-radius: 9px;
+  border-radius: var(--g-radius-xs);
   background: rgb(var(--g-tint) / .14);
   box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .22),
               inset 0 1px 6px -3px rgb(var(--refract-cool) / .6);
@@ -394,7 +394,7 @@
   flex: none;
   width: 30px; height: 30px;
   display: grid; place-items: center;
-  border-radius: 9px;
+  border-radius: var(--g-radius-xs);
   background: rgb(var(--g-tint) / .16);
   box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .25),
               inset 0 1px 6px -3px rgb(var(--refract-cool) / .7);
@@ -493,3 +493,22 @@ body[data-dock="right"] .desk-icons,
 body[data-dock="right"] .widgets { right: calc(var(--dock-h) + 26px); bottom: 14px; }
 body[data-dock="hidden"] .desk-icons,
 body[data-dock="hidden"] .widgets { bottom: 14px; }
+
+
+/* ── out of the way of a maximised window ──────────────────────
+   A maximised window fills the screen, and the dock was floating on
+   top of its bottom edge. It now retreats the same way auto-hide
+   does, and peeks back when the pointer reaches the edge. */
+body.has-max .dock-wrap[data-hidemax="1"] {
+  transition: transform 380ms var(--ease), opacity 300ms linear;
+}
+body.has-max .dock-wrap[data-hidemax="1"][data-pos="bottom"] {
+  transform: translateY(calc(100% + 20px)); opacity: 0;
+}
+body.has-max .dock-wrap[data-hidemax="1"][data-pos="left"] {
+  transform: translateX(calc(-100% - 20px)); opacity: 0;
+}
+body.has-max .dock-wrap[data-hidemax="1"][data-pos="right"] {
+  transform: translateX(calc(100% + 20px)); opacity: 0;
+}
+body.has-max .dock-wrap[data-hidemax="1"].peek { transform: none; opacity: 1; }

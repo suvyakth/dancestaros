@@ -115,12 +115,61 @@
         return s.length >= n ? s : s + rep(" ", n - s.length);
       }
 
+      /* Animate in place: claim some lines, rewrite them each frame,
+         leave the last frame on screen. Everything visual in the shell
+         is built on this. */
+      function animate(height, frames, ms, done) {
+        var rows = [];
+        for (var i = 0; i < height; i++) {
+          var pre = h("pre.tm-line.dir", { text: "" });
+          out.appendChild(pre);
+          rows.push(pre);
+        }
+        var n = 0;
+        var iv = setInterval(function () {
+          var f = frames(n);
+          if (!f) {
+            clearInterval(iv);
+            if (done) done(rows);
+            return;
+          }
+          for (var r = 0; r < height; r++) rows[r].textContent = f[r] || "";
+          pane.scrollTop = pane.scrollHeight;
+          n += 1;
+        }, ms);
+        timers.push(iv);
+        return rows;
+      }
+
+      /* ── the shell can ask questions back ──
+         `asking` swallows the next line instead of running it, which is
+         what makes the guided builders below possible. */
+      var asking = null;
+      function ask(question, cb, hint) {
+        write("");
+        write("  " + question, "ok");
+        if (hint) write("  " + hint, "dim");
+        asking = cb;
+        promptEl.classList.add("asking");
+        drawPrompt();
+      }
+      function stopAsking() {
+        asking = null;
+        promptEl.classList.remove("asking");
+        drawPrompt();
+      }
+
       function shortCwd() {
         if (cwd === fs.HOME) return "~";
         return cwd.indexOf(fs.HOME) === 0 ? "~" + cwd.slice(fs.HOME.length) : cwd;
       }
       function drawPrompt() {
         DS.clear(promptEl);
+        if (asking) {
+          promptEl.appendChild(h("i", { text: "answer" }));
+          promptEl.appendChild(h("u", { text: " › " }));
+          return;
+        }
         promptEl.appendChild(h("i", { text: DS.store.get("user", "you") + "@dancestar" }));
         promptEl.appendChild(h("b", { text: " " + shortCwd() }));
         promptEl.appendChild(h("u", { text: " $ " }));
@@ -473,7 +522,7 @@
       });
 
       cmd("theme", "glass", "theme <name>", "switch theme (or `random`)", function (a) {
-        var valid = ["aurora", "sunset", "abyss", "verdant", "lumen"];
+        var valid = ["aurora", "sunset", "abyss", "verdant", "obsidian", "lumen"];
         if (!a[0]) return write("current theme: " + DS.store.get("theme"));
         var t = a[0] === "random" ? valid[Math.floor(Math.random() * valid.length)] : a[0];
         if (valid.indexOf(t) < 0) return write("theme: unknown. try: " + valid.join(", "), "err");
@@ -519,12 +568,85 @@
           rolls.push(r);
           total += r;
         }
+
+        // six-siders get to tumble; anything else just lands
+        if (sides === 6 && n <= 4) {
+          var tumbles = 13;
+          animate(6, function (fr) {
+            if (fr > tumbles) return null;
+            var faces = [];
+            for (var d = 0; d < n; d++) {
+              faces.push(dieFace(fr === tumbles
+                ? rolls[d]
+                : 1 + Math.floor(Math.random() * 6)));
+            }
+            var out2 = [];
+            for (var r2 = 0; r2 < 5; r2++) {
+              out2.push(faces.map(function (f) { return f[r2]; }).join("  "));
+            }
+            out2.push("");
+            return out2;
+          }, 70, function () {
+            write("  " + rolls.join("  +  ") + (n > 1 ? "   =  " + total : ""), "ok");
+          });
+          return;
+        }
         write("  " + rolls.join("  +  ") + (n > 1 ? "   =  " + total : ""), "ok");
       });
 
-      cmd("flip", "fun", "flip", "flip a coin", function () {
-        write("  " + (Math.random() < 0.5 ? "heads" : "tails"), "ok");
+      cmd("crack", "fun", "crack", "put a star fracture through the screen",
+        function () {
+          DS.glass.crack(
+            Math.random() * window.innerWidth,
+            Math.random() * window.innerHeight,
+            { big: Math.random() < .4 });
+          write("  ouch.", "dim");
+        });
+
+      var COIN = [
+        ["   .-\"\"\"-.  ", "  :  ( )  : ", "   `-...-'  "],
+        ["    .---.   ", "   ( (o) )  ", "    `---'   "],
+        ["     .-.    ", "    ( | )   ", "     `-'    "],
+        ["      |     ", "      |     ", "      |     "],
+        ["     .-.    ", "    ( | )   ", "     `-'    "],
+        ["    .---.   ", "   (  X  )  ", "    `---'   "]
+      ];
+
+      cmd("flip", "fun", "flip", "flip a coin, properly", function () {
+        var land = Math.random() < 0.5 ? "HEADS" : "TAILS";
+        var spins = 16 + Math.floor(Math.random() * 6);
+        animate(4, function (n) {
+          if (n > spins) return null;
+          var f = COIN[n % COIN.length];
+          // it slows as it falls
+          var lift = Math.max(0, 3 - Math.floor(n / 6));
+          return [rep2(" ", lift * 2) + f[0], rep2(" ", lift * 2) + f[1],
+                  rep2(" ", lift * 2) + f[2], ""];
+        }, 55, function () {
+          write("");
+          CMDS.banner.fn([land]);
+          write("");
+        });
       });
+
+      function rep2(c, n) { return n > 0 ? new Array(n + 1).join(c) : ""; }
+
+      var PIPS = {
+        1: ["     ", "  o  ", "     "],
+        2: ["o    ", "     ", "    o"],
+        3: ["o    ", "  o  ", "    o"],
+        4: ["o   o", "     ", "o   o"],
+        5: ["o   o", "  o  ", "o   o"],
+        6: ["o   o", "o   o", "o   o"]
+      };
+      function dieFace(v) {
+        var p = PIPS[Math.min(6, Math.max(1, v))];
+        return ["+-------+",
+                "| " + p[0] + " |",
+                "| " + p[1] + " |",
+                "| " + p[2] + " |",
+                "+-------+"];
+      }
 
       cmd("banner", "fun", "banner <text>", "big block letters", function (a) {
         var text = (a.join(" ") || "GLASS").toUpperCase().slice(0, 12);
@@ -627,26 +749,72 @@
       /* ── custom commands ─────────────────────────────────────
          The point of the whole section: the user extends the shell
          at runtime and it persists. */
+      /* ── the guided builder ──────────────────────────────────────
+         `define name body` works if you already know the shape. Typing
+         `define` on its own walks you through it instead, because
+         "here is the syntax" is not the same as knowing how to start. */
+      function buildCommand() {
+        write("");
+        box([
+          "Let us make you a command.",
+          "",
+          "A command is a NAME you type, and a BODY it runs.",
+          "The body is just shell lines - the same ones you type here."
+        ], "ok");
+
+        ask("What should it be called?", function (name) {
+          name = (name || "").trim().toLowerCase().split(/\s+/)[0];
+          if (!name) return write("  Cancelled.", "dim");
+          if (!/^[a-z][a-z0-9_-]*$/.test(name)) {
+            write("  Names start with a letter, then letters, digits, - or _.", "err");
+            return buildCommand();
+          }
+          if (CMDS[name]) {
+            write("  `" + name + "` is already a built-in. Pick another.", "err");
+            return buildCommand();
+          }
+
+          write("");
+          write("  Good. Now what should `" + name + "` DO?", "ok");
+          write("");
+          write("  Anything you can type here. Some starting points:", "dim");
+          write("");
+          write("    echo Hello $1!                 say something back");
+          write("    theme sunset; preset crystal   two commands, in order");
+          write("    open notes                     launch an app");
+          write("    do sys:lock                    run any system action");
+          write("    cd ~/Documents; ls             go somewhere and look");
+          write("");
+          write("  $1 $2 $3  become the words typed after your command", "dim");
+          write("  $*        becomes all of them at once", "dim");
+          write("  $USER $THEME $TIME  fill themselves in", "dim");
+          write("  ;         separates one step from the next", "dim");
+
+          ask("So, " + name + " should run...", function (bodyText) {
+            bodyText = (bodyText || "").trim();
+            if (!bodyText) return write("  Cancelled.", "dim");
+
+            var all = DS.store.get("customCmds", {});
+            all[name] = bodyText;
+            DS.store.set("customCmds", all);
+
+            write("");
+            box([
+              "Done. `" + name + "` is yours.",
+              "",
+              name + "  ->  " + bodyText,
+              "",
+              "It is saved, so it survives a reload.",
+              "`commands` lists yours, `undefine " + name + "` removes it."
+            ], "ok");
+            write("");
+            write("  Try it now - type: " + name, "dir");
+          }, "the whole line, exactly as you would type it");
+        }, "one word, e.g. hi, work, shiny");
+      }
+
       cmd("define", "custom", "define <name> <body>", "invent your own command", function (a) {
-        if (!a.length) {
-          box([
-            "define — make your own command",
-            "",
-            "  define hi echo Hello $1!",
-            "  define work open terminal; open notes; theme abyss",
-            "  define shiny preset crystal; accent random",
-            "",
-            "inside the body you can use:",
-            "  $1 $2 $3   the words typed after your command",
-            "  $*         all of them at once",
-            "  $USER      your name        $THEME  current theme",
-            "  ;          run several commands in order",
-            "",
-            "then:  commands   list yours",
-            "       undefine <name>   remove one"
-          ], "ok");
-          return;
-        }
+        if (!a.length) { buildCommand(); return; }
         var name = a[0].toLowerCase();
         if (!/^[a-z][a-z0-9_-]*$/.test(name)) {
           return write("define: names must start with a letter (a-z, 0-9, - and _)", "err");
@@ -885,6 +1053,14 @@
       }
 
       function run(raw) {
+        if (asking) {
+          var handler = asking;
+          writeEcho(raw);
+          stopAsking();
+          handler(raw.trim());
+          pane.scrollTop = pane.scrollHeight;
+          return;
+        }
         writeEcho(raw);
         var line = raw.trim();
         if (!line) return;

@@ -229,6 +229,7 @@
               sunset:  "linear-gradient(135deg,#fbbf24,#f43f5e 50%,#a855f7)",
               abyss:   "linear-gradient(135deg,#22d3ee,#0e7490 50%,#0f172a)",
               verdant: "linear-gradient(135deg,#a3e635,#14b8a6 50%,#065f46)",
+              obsidian: "linear-gradient(135deg,#4c1d95,#1e1b2e 50%,#000)",
               lumen:   "linear-gradient(135deg,#eef4ff,#93c5fd 55%,#c084fc)"
             }[L.theme] || "linear-gradient(135deg,#64748b,#0f172a)");
 
@@ -330,6 +331,106 @@
           }
         })
       ]));
+    }
+  });
+
+  /* ═══════════════════ USERS ═══════════════════ */
+  DS.settingsPanes.push({
+    id: "users",
+    label: "Users",
+    icon: "home",
+    after: "appearance",
+    build: function (host, ctx) {
+      DS.users.syncActive();
+      var activeId = DS.users.activeId();
+
+      host.appendChild(h("h2.st-h", { text: "Accounts" }));
+      host.appendChild(h("p.st-sub", {
+        text: "Each account owns a complete, separate copy of the system: its " +
+              "own files, notes, widgets, glass, shortcuts and passcode. " +
+              "Switching parks yours and wakes theirs."
+      }));
+
+      host.appendChild(h("div.g-card.lk-warn", {}, [
+        h("span", { html: DS.icon("info", 16) }),
+        h("div", {}, [
+          h("b", { text: "Separate, not private." }),
+          h("p", {
+            text: "Every account's snapshot sits in the same browser storage, " +
+                  "so anyone using this browser can read all of them. " +
+                  "Accounts keep your things apart; they do not keep them secret."
+          })
+        ])
+      ]));
+
+      host.appendChild(DS.ui.section("Signed in"));
+      DS.users.sizes().forEach(function (row) {
+        var u = row.user;
+        host.appendChild(h("div.us-row", {}, [
+          h("div.av.av-md", {
+            text: u.glyph || "✦",
+            style: { background: DS.avatarGrad(u.grad || 0) }
+          }),
+          h("div.us-meta", {}, [
+            h("b", { text: u.name + (row.active ? "  ·  you" : "") }),
+            h("i", {
+              text: DS.bytes(row.bytes) +
+                    (u.hasLock ? " · passcode set" : " · no passcode")
+            })
+          ]),
+          row.active ? h("span.g-chip", { text: "Active" }) : h("button.g-btn", {
+            html: DS.icon("power", 14) + "<span>Switch</span>",
+            onclick: function () {
+              DS.ui.confirm("Switch to " + u.name + "?",
+                "Your session is saved first. The system restarts as them.",
+                { ok: "Switch" }).then(function (yes) {
+                  if (yes) DS.users.switchTo(u.id);
+                });
+            }
+          }),
+          row.active || DS.users.count() < 2 ? null : h("button.g-btn.g-btn-sq", {
+            html: DS.icon("trash", 14),
+            title: "Delete this account",
+            onclick: function () {
+              DS.ui.confirm("Delete " + u.name + "?",
+                "Everything in that account — files, notes, settings — is " +
+                "erased. This cannot be undone.",
+                { ok: "Delete", danger: true }).then(function (yes) {
+                  if (!yes) return;
+                  DS.users.remove(u.id);
+                  ctx.render();
+                });
+            }
+          })
+        ].filter(Boolean)));
+      });
+
+      host.appendChild(DS.ui.section("Add someone"));
+      var nameIn = h("input.g-field", {
+        type: "text", placeholder: "Their name…",
+        onkeydown: function (e) { if (e.key === "Enter") make(); }
+      });
+      function make() {
+        var n = nameIn.value.trim();
+        if (!n) return DS.ui.toast({ icon: "info", title: "Give them a name" });
+        var u = DS.users.add(n);
+        nameIn.value = "";
+        ctx.render();
+        DS.ui.toast({
+          icon: "home", title: n + " added",
+          body: "They start from factory defaults. Switch to set them up."
+        });
+      }
+      host.appendChild(h("div.ck-form", {}, [
+        nameIn,
+        h("button.g-btn.g-btn-accent", {
+          html: DS.icon("plus", 14) + "<span>Create</span>", onclick: make
+        })
+      ]));
+      host.appendChild(h("p.st-hint", {
+        text: "A new account starts blank and runs its own first-run setup the " +
+              "first time you switch to it."
+      }));
     }
   });
 

@@ -44,6 +44,30 @@ Layer 3 is the whole argument of this project. Open **Settings › Glass** and d
 property stays identical. There is a **Make it plastic** button that kills
 layers 3, 4 and 5 at once for a side-by-side comparison.
 
+### One customisation, everywhere
+
+Setting the corner radius to 0 used to leave the dock, the clock
+buttons and every pill still rounded, which made the control pointless.
+Every radius in the OS now derives from `--g-radius`, including the
+ones that would otherwise be hard-coded:
+
+```css
+--r-pill:  min(999px, calc(var(--g-radius) * 45));
+--r-round: min(50%,   calc(var(--g-radius) * 3));
+```
+
+Set the radius to 0 and pills become rectangles and circles become
+squares, system-wide. There are zero hard-coded `border-radius` values
+left in the stylesheets.
+
+### Dark glass
+
+`obsidian` is not a dark theme — it is dark *glass*. The pane's own
+tint flips to near-black and its density goes up, so light is absorbed
+passing through rather than added. The rims stay bright, because that
+is where light still catches. Themes get a `--g-alpha-mul` so smoked
+glass can be dense without moving your own Tint slider.
+
 ### Beyond the five layers
 
 Five layers get you glass. These four are what stop it reading as a
@@ -131,6 +155,8 @@ straight lines are what make refraction legible.
 | **Image Lab** | Non-destructive photo editing: nine adjustments, seven looks, rotate/flip, export. |
 | **Audio Lab** | Waveform, five-band EQ, effects rack, trim, render to WAV. |
 | **Video Lab** | Trim, colour grade, speed, frame grab, export to WebM. |
+| **Search** | Indexes every file name and body, note, event, app, action and setting on the machine. |
+| **Glass Forge** | Falling-sand toy where the glass you make is really transparent. |
 | **Calendar** | Month, week and agenda views, reminders, .ics import and export. |
 | **Clock** | World clocks, alarms, stopwatch, countdown timer. |
 | **Focus** | Flowmodoro and Pomodoro over one shared engine. |
@@ -230,6 +256,26 @@ project.
 
 ## Widgets
 
+Clicking a widget opens its full app; drag still moves it.
+
+### The flicker, and what it was
+
+Widgets flickered once a second, worst on the ones showing live
+numbers. The cause was not the values changing — it was **writing them
+when they had not**. Every tick reassigned `textContent` whether or not
+the text differed, and because a widget sits behind a
+`backdrop-filter`, dirtying anything inside it makes the compositor
+re-sample the entire blurred backdrop. Once a second, on every widget
+at once.
+
+Three fixes: never write text that already says what it should; keep
+the FPS counter out of the DOM entirely; and stop injecting a *nested*
+backdrop-filter (the refraction band) into panes that small, which was
+making the compositor re-sample twice. The clock widget now touches the
+DOM twice a minute instead of sixty times.
+
+
+
 Panes of glass that live on the desktop rather than in a window: no title
 bar, draggable, positions remembered. Add them from the desktop
 right-click menu, Settings > Widgets, or the launcher.
@@ -314,6 +360,39 @@ printed in the Lock pane itself.
 **Full**, **Reduced** (short window animations, frozen wallpaper) or
 **Off** (no transitions anywhere). `prefers-reduced-motion` is respected
 independently.
+
+---
+
+## Accounts
+
+Each account owns a complete, separate snapshot of the system: files,
+notes, widgets, glass, shortcuts, passcode. Switching parks yours and
+wakes theirs.
+
+That fell out of the storage design rather than being bolted on. The
+whole OS state was already one localStorage key, so an account is just
+a copy of that key:
+
+```
+dancestar.users.v1     the roster, and who is signed in
+dancestar.os.v1        the ACTIVE user's state
+dancestar.user.<id>    every other user's parked snapshot
+```
+
+Nothing else in the codebase had to learn about accounts. Apps, files,
+settings and widgets still talk to one store. Switch from the greeting
+screen or Settings > Users.
+
+Same honesty as the passcode: separate, not private. Every snapshot
+sits in the same browser storage.
+
+### Passcode attempt limit
+
+Five wrong tries starts a 30-second cooling-off, then a minute, then
+five. The screen cracks on each failure and the keypad counts the wait
+down in place. The counter lives in memory on purpose — persisting it
+would be theatre, since anyone who can reload can clear the storage it
+lived in.
 
 ---
 

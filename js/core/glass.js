@@ -206,6 +206,7 @@
     var dock = DS.qs("#dock");
     if (wrap) {
       wrap.dataset.pos = d.position || "bottom";
+      wrap.dataset.hidemax = d.hideOnMax === false ? "0" : "1";
       wrap.classList.toggle("autohide", !!d.autohide);
     }
     if (dock) {
@@ -232,6 +233,11 @@
      and injected only into surfaces that are large enough to show
      it (windows, panels, the dock, the launcher). */
   function needsEdge(node) {
+    // Widgets repaint every second. A nested backdrop-filter inside a
+    // pane that repaints makes the compositor re-sample twice, which
+    // is where the last of the widget flicker came from - and at that
+    // size the band is invisible anyway.
+    if (node.classList.contains("widget")) return false;
     var r = node.getBoundingClientRect();
     return r.width > 90 && r.height > 60;
   }
@@ -280,6 +286,77 @@
       });
     }
     glass.dress(document);
+  };
+
+  /* ═══════════════ CRACKS ═══════════════
+     A star fracture: a handful of radials from the impact point, each
+     wandering as it travels, with short branches thrown off along the
+     way. Drawn as one SVG over everything, then faded out - the glass
+     is never actually damaged, it just remembers being hit. */
+  glass.crack = function (x, y, opts) {
+    var o = opts || {};
+    if (DS.store.get("motion") === "off") return;
+
+    var W = window.innerWidth, H = window.innerHeight;
+    var cx = x === undefined ? W / 2 : x;
+    var cy = y === undefined ? H / 2 : y;
+    var arms = o.arms || (7 + Math.floor(Math.random() * 5));
+    var reach = o.reach || Math.max(W, H) * (o.big ? 0.75 : 0.42);
+
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "crack");
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+
+    function line(d, w, cls) {
+      var p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      p.setAttribute("d", d);
+      p.setAttribute("stroke-width", w);
+      if (cls) p.setAttribute("class", cls);
+      svg.appendChild(p);
+      return p;
+    }
+
+    var total = 0;
+    for (var i = 0; i < arms; i++) {
+      var ang = (i / arms) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;
+      var len = reach * (0.45 + Math.random() * 0.55);
+      var px = cx, py = cy;
+      var d = "M" + cx.toFixed(0) + " " + cy.toFixed(0);
+      var steps = 4 + Math.floor(Math.random() * 3);
+
+      for (var sIdx = 1; sIdx <= steps; sIdx++) {
+        ang += (Math.random() - 0.5) * 0.42;          // the fracture wanders
+        var seg = (len / steps) * (0.7 + Math.random() * 0.6);
+        px += Math.cos(ang) * seg;
+        py += Math.sin(ang) * seg;
+        d += " L" + px.toFixed(0) + " " + py.toFixed(0);
+
+        // a branch splitting off mid-run
+        if (sIdx > 1 && Math.random() < 0.45) {
+          var ba = ang + (Math.random() < .5 ? -1 : 1) * (0.5 + Math.random() * 0.6);
+          var bl = seg * (0.4 + Math.random() * 0.7);
+          line("M" + px.toFixed(0) + " " + py.toFixed(0) + " L" +
+               (px + Math.cos(ba) * bl).toFixed(0) + " " +
+               (py + Math.sin(ba) * bl).toFixed(0), 1);
+        }
+      }
+      line(d, 1.6);
+      total += 1;
+    }
+
+    // the bright bruise at the point of impact
+    var hit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    hit.setAttribute("cx", cx);
+    hit.setAttribute("cy", cy);
+    hit.setAttribute("r", o.big ? 26 : 15);
+    hit.setAttribute("class", "hit");
+    svg.appendChild(hit);
+
+    (DS.qs("#desktop") || document.body).appendChild(svg);
+    setTimeout(function () {
+      if (svg.parentNode) svg.parentNode.removeChild(svg);
+    }, o.hold || 1600);
+    return total;
   };
 
   /* ═══════════════ SHATTER ═══════════════

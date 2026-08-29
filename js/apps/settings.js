@@ -16,6 +16,7 @@
     { id: "sunset",  name: "Sunset",  swatch: "linear-gradient(135deg,#fbbf24,#f43f5e 50%,#a855f7)" },
     { id: "abyss",   name: "Abyss",   swatch: "linear-gradient(135deg,#22d3ee,#0e7490 50%,#0f172a)" },
     { id: "verdant", name: "Verdant", swatch: "linear-gradient(135deg,#a3e635,#14b8a6 50%,#065f46)" },
+    { id: "obsidian", name: "Obsidian", swatch: "linear-gradient(135deg,#4c1d95,#1e1b2e 50%,#000)" },
     { id: "lumen",   name: "Lumen",   swatch: "linear-gradient(135deg,#eef4ff,#93c5fd 55%,#c084fc)" }
   ];
 
@@ -450,6 +451,13 @@
         host.appendChild(DS.ui.row("Magnification", "Icons lift as the pointer passes.",
           DS.ui.toggle(DS.store.get("dock.magnify"), function (v) {
             DS.store.set("dock.magnify", v);
+            shellDock();
+          })));
+        host.appendChild(DS.ui.row("Step aside when maximised",
+          "A maximised window fills the screen, so the dock retreats and peeks " +
+          "back when you reach its edge.",
+          DS.ui.toggle(DS.store.get("dock.hideOnMax", true), function (v) {
+            DS.store.set("dock.hideOnMax", v);
             shellDock();
           })));
         host.appendChild(DS.ui.row("Auto-hide", "Slides away until you reach that edge.",
