@@ -310,6 +310,22 @@ underneath still takes clicks and context menus.
 Everything is also reachable from the shell: `theme`, `accent`, `glass`,
 `preset`.
 
+### The dock
+
+Right-click it — anywhere on it, or on any icon — for position, size,
+magnification, auto-hide and step-aside-when-maximised, all where the
+dock actually is. Any app not currently in the dock is listed there
+too, so the same menu is how you put things in it.
+
+Auto-hide has three states rather than two. A binary show/hide at a
+fixed threshold read as a switch being flipped, so the dock now
+measures how far the pointer is from its edge: parked, **leaning up to
+meet you** from about 96px, then fully out at 26px. It holds itself
+open while hovered and waits 420ms after you leave, so it can never
+slide out from under a click already on its way. The icons arrive in
+sequence, and it drops its backdrop-filter entirely while parked —
+blurring pixels nobody can see is pure cost.
+
 ### Window behaviour
 
 Clicking away can tuck the active window out of the way - three settings

@@ -478,12 +478,102 @@
 .dock.nomag .dk:has(+ .dk:hover) { transform: none; }
 .dock.nomag .dk:active { transform: scale(.96); }
 
-/* auto-hide — slides away until the pointer reaches that edge */
-.dock-wrap.autohide { transition: transform 340ms var(--ease), opacity 260ms linear; }
-.dock-wrap.autohide[data-pos="bottom"] { transform: translateY(calc(100% + 20px)); opacity: 0; }
-.dock-wrap.autohide[data-pos="left"]   { transform: translateX(calc(-100% - 20px)); opacity: 0; }
-.dock-wrap.autohide[data-pos="right"]  { transform: translateX(calc(100% + 20px)); opacity: 0; }
-.dock-wrap.autohide.peek { transform: none; opacity: 1; }
+/* ── auto-hide ──────────────────────────────────────────────────
+   Three states, not two. A hard show/hide at a 26px threshold felt
+   like a switch being flipped; the dock now leans up to meet you as
+   you approach, then commits.
+
+     (none)  parked off-screen
+     .hint   a sliver showing, from ~90px away
+     .peek   fully out
+
+   It also drops its blur while parked. A backdrop-filter on something
+   translated off-screen is pure cost for pixels nobody sees. */
+.dock-wrap {
+  transition:
+    transform 420ms var(--dock-ease, cubic-bezier(.22,.9,.28,1)),
+    opacity 300ms var(--ease);
+  will-change: transform;
+}
+.dock-wrap.autohide .dock,
+body.has-max .dock-wrap[data-hidemax="1"] .dock {
+  transition: backdrop-filter 300ms linear, box-shadow 300ms var(--ease);
+}
+
+/* parked */
+.dock-wrap.autohide[data-pos="bottom"],
+body.has-max .dock-wrap[data-hidemax="1"][data-pos="bottom"] {
+  transform: translateY(calc(100% + 16px)) scale(.94);
+  opacity: 0;
+}
+.dock-wrap.autohide[data-pos="left"],
+body.has-max .dock-wrap[data-hidemax="1"][data-pos="left"] {
+  transform: translateX(calc(-100% - 16px)) scale(.94);
+  opacity: 0;
+}
+.dock-wrap.autohide[data-pos="right"],
+body.has-max .dock-wrap[data-hidemax="1"][data-pos="right"] {
+  transform: translateX(calc(100% + 16px)) scale(.94);
+  opacity: 0;
+}
+.dock-wrap.autohide .dock,
+body.has-max .dock-wrap[data-hidemax="1"] .dock {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* leaning up to meet you */
+.dock-wrap.hint[data-pos="bottom"]  { transform: translateY(calc(100% - 13px)) scale(.97); opacity: .6; }
+.dock-wrap.hint[data-pos="left"]    { transform: translateX(calc(-100% + 13px)) scale(.97); opacity: .6; }
+.dock-wrap.hint[data-pos="right"]   { transform: translateX(calc(100% - 13px)) scale(.97); opacity: .6; }
+
+/* out, with a little overshoot */
+.dock-wrap.peek {
+  transform: none !important;
+  opacity: 1 !important;
+  transition:
+    transform 480ms cubic-bezier(.18,1.06,.32,1),
+    opacity 220ms linear;
+}
+.dock-wrap.peek .dock {
+  backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat)) brightness(var(--g-bright));
+  -webkit-backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat)) brightness(var(--g-bright));
+}
+
+/* The icons arrive in sequence rather than all at once.
+
+   Note the :not(.peek) on every selector. Writing `.dock-wrap.peek .dk
+   { transform: none }` to undo the entry state would out-specify
+   `.dk:hover` (three classes against two) and silently kill dock
+   magnification whenever the dock was peeked. So the hidden state is
+   scoped to the hidden case only, and a peeked icon simply has no
+   transform of its own to fight with. */
+.dock-wrap.autohide:not(.peek) .dk,
+body.has-max .dock-wrap[data-hidemax="1"]:not(.peek) .dk {
+  opacity: 0;
+  transform: translateY(12px) scale(.86);
+  transition: opacity 240ms var(--ease), transform 380ms cubic-bezier(.18,1.08,.32,1);
+}
+.dock-wrap[data-pos="left"].autohide:not(.peek) .dk,
+body.has-max .dock-wrap[data-hidemax="1"][data-pos="left"]:not(.peek) .dk {
+  transform: translateX(-12px) scale(.86);
+}
+.dock-wrap[data-pos="right"].autohide:not(.peek) .dk,
+body.has-max .dock-wrap[data-hidemax="1"][data-pos="right"]:not(.peek) .dk {
+  transform: translateX(12px) scale(.86);
+}
+
+/* on the way out, each icon follows the one before it */
+.dock-wrap.peek .dk {
+  transition:
+    opacity 240ms var(--ease) calc(var(--i, 0) * 16ms),
+    transform 380ms cubic-bezier(.18,1.08,.32,1) calc(var(--i, 0) * 16ms),
+    box-shadow 220ms var(--ease);
+}
+/* ...but a hovered icon reacts immediately, with no inherited delay */
+.dock-wrap.peek .dk:hover {
+  transition: transform 220ms var(--ease-back), box-shadow 220ms var(--ease);
+}
 
 /* the icon and widget layers step aside for a side dock */
 .desk-icons, .widgets { transition: inset 300ms var(--ease); }
@@ -495,20 +585,5 @@ body[data-dock="hidden"] .desk-icons,
 body[data-dock="hidden"] .widgets { bottom: 14px; }
 
 
-/* ── out of the way of a maximised window ──────────────────────
-   A maximised window fills the screen, and the dock was floating on
-   top of its bottom edge. It now retreats the same way auto-hide
-   does, and peeks back when the pointer reaches the edge. */
-body.has-max .dock-wrap[data-hidemax="1"] {
-  transition: transform 380ms var(--ease), opacity 300ms linear;
-}
-body.has-max .dock-wrap[data-hidemax="1"][data-pos="bottom"] {
-  transform: translateY(calc(100% + 20px)); opacity: 0;
-}
-body.has-max .dock-wrap[data-hidemax="1"][data-pos="left"] {
-  transform: translateX(calc(-100% - 20px)); opacity: 0;
-}
-body.has-max .dock-wrap[data-hidemax="1"][data-pos="right"] {
-  transform: translateX(calc(100% + 20px)); opacity: 0;
-}
-body.has-max .dock-wrap[data-hidemax="1"].peek { transform: none; opacity: 1; }
+/* A maximised window fills the screen, so the dock retreats using the
+   same three-state motion as auto-hide above. */

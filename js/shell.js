@@ -296,10 +296,12 @@
     DS.clear(dock);
     var ids = DS.store.get("dockApps", []);
 
+    var slot = 0;
     ids.forEach(function (id) {
       var app = DS.apps.get(id);
       if (!app) return;
       dock.appendChild(h("button.dk", {
+        style: { "--i": slot++ },
         data: { app: app.id },
         html: DS.icon(app.icon, 24),
         onclick: function () {
@@ -320,7 +322,10 @@
                 var list = DS.store.get("dockApps", []).filter(function (x) { return x !== app.id; });
                 DS.store.set("dockApps", list);
                 shell.buildDock();
-              } }
+              } },
+            { sep: true },
+            { label: "Customise the dock…", icon: "sliders",
+              action: function () { dockMenu(e.clientX, e.clientY); } }
           ].filter(Boolean));
         }
       }, [
@@ -331,31 +336,147 @@
 
     dock.appendChild(h("div.dock-sep"));
     dock.appendChild(h("button.dk", {
+      style: { "--i": slot++ },
       html: DS.icon("grid", 24),
-      onclick: function () { shell.launcher(true); }
+      onclick: function () { shell.launcher(true); },
+      oncontextmenu: function (e) { e.preventDefault(); dockMenu(e.clientX, e.clientY); }
     }, [h("span.dk-tip", { text: "Launcher  ·  Ctrl K" })]));
+
+    /* right-click the dock itself, not an icon */
+    dock.addEventListener("contextmenu", function (e) {
+      if (e.target.closest(".dk")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dockMenu(e.clientX, e.clientY);
+    });
 
     DS.wm.syncDock();
     DS.glass.dress(dock);
   };
 
-  /* Auto-hide: the dock slides away and peeks back when the pointer
-     reaches its edge (or while it is hovered). */
+  /* ── auto-hide, by proximity ───────────────────────────────────
+     A binary show/hide at a fixed threshold read as a switch being
+     flipped. This measures how far the pointer is from the dock's edge
+     and gives it three states, so the dock leans up to meet you before
+     committing.
+
+     It also holds itself open while hovered and waits a beat after you
+     leave, so the dock can never slide out from under a click that was
+     already on its way. */
+  var peekHold = null;
+
   function wireDockPeek() {
     var wrap = DS.qs(".dock-wrap");
+    var NEAR = 26;      // fully out
+    var FAR = 96;       // start leaning
+
+    function distance(e, pos) {
+      if (pos === "left") return e.clientX;
+      if (pos === "right") return window.innerWidth - e.clientX;
+      return window.innerHeight - e.clientY;
+    }
+
     document.addEventListener("pointermove", function (e) {
       var d = DS.store.get("dock", {});
       var hidden = d.autohide ||
         (d.hideOnMax !== false && document.body.classList.contains("has-max"));
-      if (!hidden) { wrap.classList.remove("peek"); return; }
-      var pos = d.position || "bottom";
-      var near =
-        pos === "bottom" ? e.clientY > window.innerHeight - 26 :
-        pos === "left"   ? e.clientX < 26 :
-                           e.clientX > window.innerWidth - 26;
-      wrap.classList.toggle("peek", near || wrap.matches(":hover"));
+
+      if (!hidden) {
+        wrap.classList.remove("peek");
+        wrap.classList.remove("hint");
+        return;
+      }
+      if (peekHold) return;            // hovering, or in the grace period
+
+      var dist = distance(e, d.position || "bottom");
+      wrap.classList.toggle("peek", dist < NEAR);
+      wrap.classList.toggle("hint", dist >= NEAR && dist < FAR);
     }, { passive: true });
+
+    wrap.addEventListener("pointerenter", function () {
+      if (peekHold && peekHold !== true) clearTimeout(peekHold);
+      wrap.classList.add("peek");
+      wrap.classList.remove("hint");
+      peekHold = true;
+    });
+    wrap.addEventListener("pointerleave", function () {
+      peekHold = setTimeout(function () {
+        peekHold = null;
+        wrap.classList.remove("peek");
+      }, 420);
+    });
   }
+
+  /* ── right-click the dock ──────────────────────────────────────
+     Everything from Settings > Desktop > Dock, offered where the dock
+     actually is. It doubles as the way to put an app there: any app
+     not currently in the dock is listed, and picking one adds it and
+     opens it. */
+  function dockMenu(x, y) {
+    var d = DS.store.get("dock", {});
+    function set(k, v) {
+      DS.store.set("dock." + k, v);
+      shell.applyDockLayout();
+      shell.buildDock();
+    }
+    function tick(on) { return on ? "check" : "chevR"; }
+
+    var missing = DS.apps.all().filter(function (a) {
+      return DS.store.get("dockApps", []).indexOf(a.id) < 0;
+    });
+
+    var items = [
+      { title: "Position" },
+      { label: "Bottom", icon: tick(d.position === "bottom"),
+        action: function () { set("position", "bottom"); } },
+      { label: "Left", icon: tick(d.position === "left"),
+        action: function () { set("position", "left"); } },
+      { label: "Right", icon: tick(d.position === "right"),
+        action: function () { set("position", "right"); } },
+
+      { title: "Size" },
+      { label: "Small", icon: tick(d.size <= 38),
+        action: function () { set("size", 36); } },
+      { label: "Medium", icon: tick(d.size > 38 && d.size < 56),
+        action: function () { set("size", 46); } },
+      { label: "Large", icon: tick(d.size >= 56),
+        action: function () { set("size", 60); } },
+
+      { title: "Behaviour" },
+      { label: (d.magnify ? "Turn off" : "Turn on") + " magnification",
+        icon: "sliders", action: function () { set("magnify", !d.magnify); } },
+      { label: d.autohide ? "Always show it" : "Hide until I reach the edge",
+        icon: "eye", action: function () { set("autohide", !d.autohide); } },
+      { label: d.hideOnMax === false ? "Step aside when maximised"
+                                     : "Stay put when maximised",
+        icon: "maximize", action: function () { set("hideOnMax", d.hideOnMax === false); } }
+    ];
+
+    if (missing.length) {
+      items.push({ title: "Add to the dock" });
+      missing.slice(0, 8).forEach(function (a) {
+        items.push({
+          label: a.name, icon: a.icon,
+          action: function () {
+            var list = DS.store.get("dockApps", []).slice();
+            list.push(a.id);
+            DS.store.set("dockApps", list);
+            shell.buildDock();
+            DS.wm.open(a.id);
+          }
+        });
+      });
+    }
+
+    items.push({ sep: true });
+    items.push({
+      label: "All dock settings…", icon: "settings",
+      action: function () { DS.wm.open("settings", { pane: "desktop" }); }
+    });
+
+    DS.ui.ctx(x, y, items);
+  }
+  shell.dockMenu = dockMenu;
 
   /** Dock geometry plus the body attribute the layers key off. */
   shell.applyDockLayout = function () {
