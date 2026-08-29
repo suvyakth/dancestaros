@@ -102,6 +102,11 @@
     },
     help: function () {
       return [
+        { label: "Take the guided tour", icon: "star",
+          action: function () { DS.tour.start(); } },
+        { label: "Show me the glass", icon: "layers",
+          action: function () { DS.demo.dispersion(); } },
+        { sep: true },
         { title: "Keyboard" },
         { label: "Launcher", kbd: "Ctrl K", dim: true },
         { label: "Cycle windows", kbd: "Alt Tab", dim: true },

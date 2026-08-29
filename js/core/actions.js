@@ -186,6 +186,8 @@
     });
 
     [
+      ["sys:tour", "Take the guided tour", "star", function () { DS.tour.start(); }],
+      ["sys:demo", "Demonstrate the glass", "layers", function () { DS.demo.dispersion(); }],
       ["sys:launcher", "Open the launcher", "search", function () { DS.shell.launcher(true); }],
       ["sys:lock", "Lock the screen", "lock", function () { DS.shell.lockScreen(); }],
       ["sys:import", "Import files", "plus", function () { DS.media.pick(); }],

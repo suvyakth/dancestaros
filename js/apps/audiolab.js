@@ -472,7 +472,8 @@
               setStatus();
               DS.ui.toast({
                 icon: "save", title: "Rendered to Music",
-                body: fs.basename(p) + " · " + DS.bytes(blob.size)
+                body: fs.basename(p) + " · " + DS.bytes(blob.size),
+                action: { label: "Play it", run: function () { load(p); } }
               });
             });
         }).catch(function (e) {

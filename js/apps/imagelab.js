@@ -447,7 +447,8 @@
         }).then(function (path) {
           renderLibrary();
           DS.ui.toast({
-            icon: "save", title: "Saved to Pictures", body: fs.basename(path)
+            icon: "save", title: "Saved to Pictures", body: fs.basename(path),
+            action: { label: "Open it", run: function () { DS.openPath(path); } }
           });
         });
       }

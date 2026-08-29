@@ -96,7 +96,8 @@
           icon: "clock",
           title: "Focus complete",
           body: DS.hms(spent) + " of focus. Break: " + DS.hms(brk) + ".",
-          timeout: 9000
+          timeout: 9000,
+          action: { label: "Open Focus", run: function () { DS.wm.open("focus"); } }
         });
       }
       return;

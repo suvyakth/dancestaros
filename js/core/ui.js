@@ -10,28 +10,65 @@
   var ui = {};
 
   /* ───────────────────── NOTIFICATIONS ───────────────────── */
+  /* A notification that tells you to go and do something should take
+     you there. Pass `action: { label, run }` and the whole card becomes
+     the way in, with a dismiss button so acting and closing stay
+     separate. Without an action it behaves as before: click to close. */
   ui.toast = function (opts) {
     var host = DS.qs("#toasts");
     if (!host) return null;
     var o = opts || {};
-    var card = h("div.toast.g", {}, [
+    var act = o.action;
+
+    var card = h("div.toast.g" + (act ? ".has-action" : ""), {}, [
       h("div.ti", { html: DS.icon(o.icon || "bell", 17) }),
       h("div.tc", {}, [
         h("b", { text: o.title || "Notice" }),
-        o.body ? h("p", { text: o.body }) : null
-      ])
+        o.body ? h("p", { text: o.body }) : null,
+        act ? h("span.t-act", {}, [
+          h("span", { text: act.label || "Show me" }),
+          h("span", { html: DS.icon("chevR", 12) })
+        ]) : null
+      ]),
+      act ? h("button.t-close", {
+        html: DS.icon("x", 13),
+        title: "Dismiss",
+        onclick: function (e) { e.stopPropagation(); dismiss(); }
+      }) : null
     ]);
+
     host.appendChild(card);
     DS.glass.dress(card);
 
     var life = o.timeout === 0 ? 0 : (o.timeout || 4200);
+    var timer = null;
+
     function dismiss() {
       if (card.classList.contains("out")) return;
+      if (timer) clearTimeout(timer);
       card.classList.add("out");
       setTimeout(function () { if (card.parentNode) card.parentNode.removeChild(card); }, 280);
     }
-    card.addEventListener("click", dismiss);
-    if (life) setTimeout(dismiss, life);
+
+    card.addEventListener("click", function () {
+      if (act && act.run) {
+        dismiss();
+        try { act.run(); } catch (e) { console.error(e); }
+        return;
+      }
+      dismiss();
+    });
+
+    // an actionable card waits longer, since it is asking to be used
+    if (life) timer = setTimeout(dismiss, act ? Math.max(life, 9000) : life);
+    // ...and stops counting down while you are reading it
+    card.addEventListener("pointerenter", function () {
+      if (timer) { clearTimeout(timer); timer = null; }
+    });
+    card.addEventListener("pointerleave", function () {
+      if (life && !timer) timer = setTimeout(dismiss, 2600);
+    });
+
     return dismiss;
   };
 

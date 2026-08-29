@@ -329,7 +329,8 @@
               setStatus();
               DS.ui.toast({
                 icon: "save", title: "Exported to Movies",
-                body: fs.basename(p) + " · " + DS.bytes(blob.size), timeout: 8000
+                body: fs.basename(p) + " · " + DS.bytes(blob.size), timeout: 8000,
+                action: { label: "Open it", run: function () { load(p); } }
               });
             });
         };

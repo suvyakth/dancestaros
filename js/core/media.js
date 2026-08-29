@@ -207,12 +207,20 @@
         var parts = Object.keys(byKind).map(function (k) {
           return byKind[k] + " " + k + (byKind[k] > 1 ? "s" : "");
         });
+        var first = made[0];
         DS.ui.toast({
           icon: "save",
           title: "Imported " + made.length + " file" + (made.length > 1 ? "s" : ""),
           body: parts.join(", ") + " · " +
                 DS.bytes(made.reduce(function (s, m) { return s + m.size; }, 0)),
-          timeout: 6000
+          timeout: 8000,
+          action: first ? {
+            label: made.length > 1 ? "Show them" : "Open it",
+            run: function () {
+              if (made.length > 1) DS.wm.open("finder", { path: DS.fs.dirname(first.path) });
+              else DS.openPath(first.path);
+            }
+          } : null
         });
         if (DS.shell && DS.shell.buildDesktopIcons) DS.shell.buildDesktopIcons();
         return made;

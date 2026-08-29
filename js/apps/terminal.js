@@ -990,6 +990,12 @@
         if (tut >= TUTORIAL.length - 1) tut = -1;
       }
 
+      cmd("tour", "system", "tour", "the guided tour of the whole desktop",
+        function () {
+          write("  starting the guided tour...", "ok");
+          DS.tour.start();
+        });
+
       cmd("tutorial", "system", "tutorial", "a six-step tour of the shell", function (a) {
         if (a[0] === "end" || a[0] === "stop") {
           tut = -1;

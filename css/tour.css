@@ -1,0 +1,137 @@
+/* ═══════════════════════════════════════════════════════════════
+   tour.css — the guided tutorial
+
+   The spotlight is a hole in a dark layer, made with one enormous
+   box-shadow spread rather than a real mask. The upside over a mask
+   is that the cut-out animates smoothly between targets, so the
+   light appears to travel across the desktop instead of blinking
+   from one place to the next.
+   ═══════════════════════════════════════════════════════════════ */
+
+.tour-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 8600;
+  pointer-events: none;
+  animation: fadeIn 300ms var(--ease);
+}
+.tour-veil.out { animation: fadeOut 300ms var(--ease) forwards; }
+
+.tour-spot {
+  position: fixed;
+  border-radius: var(--g-radius-sm);
+  pointer-events: none;
+  box-shadow:
+    0 0 0 9999px rgb(var(--edge-lo) / .58),
+    inset 0 0 0 1.5px hsl(var(--accent) / .85),
+    0 0 34px -4px hsl(var(--accent) / .55);
+  transition:
+    left 460ms cubic-bezier(.3,.9,.3,1),
+    top 460ms cubic-bezier(.3,.9,.3,1),
+    width 460ms cubic-bezier(.3,.9,.3,1),
+    height 460ms cubic-bezier(.3,.9,.3,1),
+    opacity 260ms linear;
+}
+/* a step with no target dims the whole screen instead */
+.tour-spot.off {
+  left: 50%; top: 50%;
+  width: 0; height: 0;
+  box-shadow: 0 0 0 9999px rgb(var(--edge-lo) / .58);
+}
+
+.tour-card {
+  position: fixed;
+  width: 340px;
+  padding: 20px 20px 16px;
+  pointer-events: auto;
+  --g-blur: 34px;
+  --g-alpha: .13;
+  box-shadow: var(--g-inset), var(--shadow-deep);
+  animation: tourIn 380ms var(--ease-back);
+  transition: left 420ms var(--ease), top 420ms var(--ease);
+}
+.tour-card.mid {
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%);
+  width: 400px;
+}
+@keyframes tourIn { from { opacity: 0; transform: scale(.94) translateY(10px); } }
+.tour-card.mid { animation: tourInMid 380ms var(--ease-back); }
+@keyframes tourInMid {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(.94); }
+}
+.tour-card > * { position: relative; z-index: 3; }
+
+.tour-step {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 8px;
+}
+.tour-title {
+  margin: 0 0 8px;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -.012em;
+  line-height: 1.2;
+}
+.tour-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.tour-key {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 5px 12px;
+  border-radius: var(--g-radius-2xs);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: rgb(var(--edge-lo) / .22);
+  box-shadow:
+    inset 0 1px 3px rgb(var(--edge-lo) / .3),
+    inset 0 0 0 .5px rgb(var(--edge-hi) / .24);
+}
+
+.tour-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 18px;
+}
+.tour-dots { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+.tour-dots i {
+  width: 5px; height: 5px;
+  border-radius: var(--r-round);
+  background: rgb(var(--edge-hi) / .2);
+  transition: all 300ms var(--ease-back);
+}
+.tour-dots i.done { background: rgb(var(--edge-hi) / .42); }
+.tour-dots i.on {
+  width: 16px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, hsl(var(--accent) / .95), hsl(var(--accent-2) / .8));
+  box-shadow: 0 0 10px -1px hsl(var(--accent) / .8);
+}
+.tour-row .g-btn { height: 28px; padding: 0 13px; font-size: 12px; }
+
+.tour-skip {
+  display: block;
+  margin: 12px auto 0;
+  font-size: 11px;
+  color: var(--text-3);
+  padding: 3px 8px;
+  border-radius: var(--g-radius-2xs);
+  transition: color 150ms linear, background 150ms linear;
+}
+.tour-skip:hover { color: var(--text-2); background: rgb(var(--edge-hi) / .1); }
+
+@media (max-width: 640px) {
+  .tour-card, .tour-card.mid { width: min(320px, 92vw); }
+}

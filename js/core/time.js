@@ -116,7 +116,11 @@
       icon: "bell",
       title: a.label || "Alarm",
       body: t + " — " + (a.days && a.days.length ? "repeating" : "one-off"),
-      timeout: 12000
+      timeout: 12000,
+      action: {
+        label: "Open Clock",
+        run: function () { DS.wm.open("clock", { tab: "alarm" }); }
+      }
     });
     // flash the desktop once, so a muted tab still shows something
     var d = DS.qs("#desktop");

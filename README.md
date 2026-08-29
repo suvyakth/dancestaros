@@ -461,6 +461,36 @@ sync, and claiming otherwise would be the actual bug.
 
 ---
 
+## The tutorial
+
+**Help > Take the guided tour**, `tour` in the shell, or Ctrl+K. Twelve
+steps that spotlight the real element being described — a hole cut out
+of a dimming layer with one enormous `box-shadow` spread, which unlike
+a mask animates smoothly, so the light travels across the desktop
+rather than blinking between places. Steps open whatever they are about
+to talk about, and the spotlight re-measures every 500ms so it stays on
+target as windows settle.
+
+Some steps **perform** the thing instead of describing it. "Drag
+Dispersion to 0" is a sentence; the *Show me* button opens the pane,
+animates the slider to zero, holds while you look at flat plastic, then
+puts it back. Same for sweeping the light across every rim, cycling the
+finishes, and breaking a window.
+
+### Notifications go somewhere
+
+A card that tells you to do something now carries the way to do it.
+`DS.ui.toast({ action: { label, run } })` turns the whole card into the
+route, with a separate dismiss so acting and closing never get
+confused, and it stops counting down while the pointer is on it.
+
+An import offers to show you the files. An export offers to open what
+it just made. An alarm opens the Clock, a reminder opens the Calendar,
+a finished focus block opens Focus. The welcome-back hint runs the demo
+it is describing.
+
+---
+
 ## Shortcuts
 
 | Key | Action |

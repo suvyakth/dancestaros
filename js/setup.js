@@ -42,6 +42,68 @@
     "Drag Dispersion to 0 to watch glass turn into plastic."
   ];
 
+  /* The welcome-back notification used to describe something and then
+     do nothing when clicked. Each hint now carries the action it is
+     describing, so the card is the way in rather than a note about one. */
+  var HINTS = [
+    {
+      title: "Drag Dispersion to 0",
+      body: "It is the colour split at every edge, and the whole difference " +
+            "between glass and frosted plastic.",
+      label: "Show me", run: function () { DS.demo.dispersion(); }
+    },
+    {
+      title: "There is one light for the whole desktop",
+      body: "Every rim points at the same source, so panes disagree with " +
+            "each other the way real ones would.",
+      label: "Sweep it", run: function () { DS.demo.light(); }
+    },
+    {
+      title: "Glass does not have to be flat",
+      body: "Reeded, fluted, cathedral, bubbled, frosted.",
+      label: "Cycle the finishes", run: function () { DS.demo.finish(); }
+    },
+    {
+      title: "Closing a pane of glass breaks it",
+      body: "Shards are thrown from the window's own footprint.",
+      label: "Break one", run: function () { DS.demo.shatter(); }
+    },
+    {
+      title: "Everything is searchable",
+      body: "Apps, files, file contents, events and every action the system " +
+            "can perform.",
+      label: "Open Search", run: function () { DS.wm.open("search"); }
+    },
+    {
+      title: "Invent your own command",
+      body: "The shell walks you through it, step by step.",
+      label: "Open the shell", run: function () { DS.wm.open("terminal"); }
+    },
+    {
+      title: "Bind any key to anything",
+      body: "Every app, theme, finish and widget is a bindable action.",
+      label: "Open Shortcuts",
+      run: function () { DS.wm.open("settings", { pane: "shortcuts" }); }
+    },
+    {
+      title: "Build your own wallpaper",
+      body: "It is the only thing the glass has to refract, so it changes " +
+            "how the whole system reads.",
+      label: "Open the studio",
+      run: function () { DS.wm.open("settings", { pane: "wallpaper" }); }
+    },
+    {
+      title: "Windows snap to the edges",
+      body: "Drag a title bar to the top or a side.",
+      label: "Demonstrate", run: function () { DS.demo.snap(); }
+    },
+    {
+      title: "New here?",
+      body: "The guided tour points at each part of the system in turn.",
+      label: "Take the tour", run: function () { DS.tour.start(); }
+    }
+  ];
+
   function greetWord() {
     var hr = new Date().getHours();
     if (hr < 5)  return "Still up";
@@ -409,6 +471,26 @@
       return u.id !== DS.users.activeId();
     });
 
+    /* Still called "you"? Ask, rather than greeting a placeholder. */
+    var unnamed = name === "you" || !name;
+    if (unnamed) {
+      var nameField = h("input.lock-name", {
+        type: "text", placeholder: "What should I call you?",
+        maxlength: "24",
+        onkeydown: function (e) {
+          if (e.key !== "Enter") return;
+          var v = nameField.value.trim();
+          if (!v) return;
+          DS.store.set("user", v);
+          DS.users.syncActive();
+          nameField.blur();
+          DS.qs(".lock-hi").firstChild.textContent = greetWord() + ", " + v;
+          nameField.remove();
+        }
+      });
+      setTimeout(function () { nameField.focus(); }, 900);
+    }
+
     var user = h("div.lock-user.g", {}, [
       avatarEl("md"),
       h("div.lock-hi", {}, [
@@ -422,6 +504,7 @@
     root.appendChild(timeEl);
     root.appendChild(dateEl);
     root.appendChild(user);
+    if (unnamed) root.appendChild(nameField);
 
     if (others.length) {
       var row = h("div.lock-others");
@@ -525,6 +608,7 @@
   };
 
   landing.TIPS = TIPS;
+  landing.HINTS = HINTS;
   landing.greetWord = greetWord;
   landing.avatarEl = avatarEl;
   DS.landing = landing;

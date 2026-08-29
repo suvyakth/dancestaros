@@ -656,7 +656,8 @@
         icon: "grid",
         title: e.title,
         body: "Starts at " + pretty(e.start) + " — in " + e.remind + " minutes.",
-        timeout: 12000
+        timeout: 12000,
+        action: { label: "Open Calendar", run: function () { DS.wm.open("calendar"); } }
       });
     });
     if (changed) save(list);

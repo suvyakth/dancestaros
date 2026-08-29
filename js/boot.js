@@ -23,20 +23,24 @@
 
     setTimeout(function () {
       if (firstRun) {
-        DS.wm.open("terminal");
         DS.ui.toast({
-          icon: "layers",
+          icon: "star",
           title: "Welcome, " + DS.store.get("user", "you"),
-          body: "Terminal is open — type `tutorial` for a six-step tour, " +
-                "or `fun` to see what else is in there.",
-          timeout: 10000
+          body: "There is a short guided tour that points at each part of the " +
+                "system in turn. It takes about a minute.",
+          timeout: 0,
+          action: { label: "Take the tour", run: function () { DS.tour.start(); } }
         });
       } else {
-        var tips = DS.landing.TIPS;
+        /* One hint, and clicking it does the thing it describes. */
+        var hints = DS.landing.HINTS;
+        var hint = hints[Math.floor(Math.random() * hints.length)];
         DS.ui.toast({
           icon: "bell",
           title: DS.landing.greetWord() + ", " + DS.store.get("user", "you"),
-          body: tips[Math.floor(Math.random() * tips.length)]
+          body: hint.title + " — " + hint.body,
+          timeout: 12000,
+          action: { label: hint.label, run: hint.run }
         });
       }
     }, 560);
