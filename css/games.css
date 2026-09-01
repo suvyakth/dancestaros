@@ -1,0 +1,950 @@
+/* ═══════════════════════════════════════════════════════════════
+   games.css — the Games app
+
+   Same house rule as apps.css: no `background` is ever an opaque
+   colour. A game board is a *recess* — edge-lo on the way in, a lit
+   rim on the way out — so it reads as something cut into the glass
+   rather than a panel laid on top of it.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* `flush` makes .win-body a flex row, so the root has to claim the
+   width itself — without this the shelf sizes to its widest word. */
+.gm-root {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ───────────────────── THE SHELF ───────────────────── */
+.gm-shelf { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 22px 26px; }
+
+.gm-head h2 {
+  margin: 0 0 4px;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+.gm-head p {
+  margin: 0 0 18px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-2);
+  max-width: 52ch;
+}
+.gm-headrow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* ── tabs ── */
+.gm-tabs {
+  flex: none;
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: rgb(var(--edge-lo) / .18);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .12);
+}
+.gm-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 13px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--text-2);
+  cursor: default;
+  white-space: nowrap;
+  transition: background 150ms linear, color 150ms linear;
+}
+.gm-tab:hover { color: var(--text); }
+.gm-tab.on {
+  color: var(--text);
+  background: linear-gradient(120deg,
+    rgb(var(--edge-hi) / .2), rgb(var(--edge-hi) / .09));
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .24),
+              inset 0 1px 6px -3px rgb(var(--refract-cool) / .55);
+}
+.gm-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: var(--r-pill);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #04121d;
+  background: hsl(var(--accent) / 1);
+}
+
+/* ── the two little counts on a shelf tile ── */
+.gm-tmeta {
+  display: flex;
+  gap: 12px;
+  padding: 8px 14px 0;
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+.gm-tm { display: inline-flex; align-items: center; gap: 4px; }
+.gm-tm svg { opacity: .8; }
+
+/* ── a progress bar, used by achievements and the summary ── */
+.gm-bar-track {
+  position: relative;
+  height: 5px;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  background: rgb(var(--edge-lo) / .3);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .1);
+}
+.gm-bar-track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, hsl(var(--accent) / .9), hsl(var(--accent-2) / .9));
+  box-shadow: 0 0 10px -2px hsl(var(--accent) / .8);
+  transition: width 400ms var(--ease);
+}
+
+/* ───────────────────── ACHIEVEMENTS ───────────────────── */
+.gm-sum { padding: 16px 18px; margin-bottom: 4px; }
+.gm-sum-n { font-size: 13px; color: var(--text-2); }
+.gm-sum-n b { font-size: 26px; font-weight: 650; color: var(--text); letter-spacing: -.02em; }
+.gm-sum-lab {
+  margin: 1px 0 11px;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.gm-grouphead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 20px 0 8px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.gm-groupn { letter-spacing: 0; text-transform: none; font-weight: 550; }
+
+.gm-awgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+  gap: 8px;
+}
+.gm-aw {
+  display: flex;
+  gap: 11px;
+  padding: 11px 13px;
+  border-radius: var(--g-radius-sm);
+  background: rgb(var(--edge-hi) / .05);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .09);
+  opacity: .72;
+  transition: opacity 200ms linear, box-shadow 200ms linear;
+}
+/* An earned one is lit from its tier's hue; a locked one is the same
+   card with the light off, so the wall reads as progress. */
+.gm-aw.got {
+  opacity: 1;
+  background: linear-gradient(150deg,
+    hsl(var(--hue) 80% 60% / .16), rgb(var(--edge-hi) / .05));
+  box-shadow: inset 0 0 0 .5px hsl(var(--hue) 80% 70% / .3),
+              inset 0 1px 8px -4px hsl(var(--hue) 90% 70% / .5);
+}
+.gm-aw-medal {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-round);
+  color: var(--text-3);
+  background: rgb(var(--edge-lo) / .22);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .12);
+}
+.gm-aw.got .gm-aw-medal {
+  color: hsl(var(--hue) 90% 78%);
+  background: linear-gradient(150deg,
+    hsl(var(--hue) 85% 62% / .5), hsl(var(--hue) 85% 48% / .25));
+  box-shadow: inset 0 1px 7px -3px rgb(var(--refract-cool) / .8),
+              inset 0 0 0 .5px hsl(var(--hue) 90% 80% / .5),
+              0 0 16px -6px hsl(var(--hue) 90% 66% / .9);
+}
+.gm-aw-txt { min-width: 0; flex: 1; }
+.gm-aw-txt b { display: block; font-size: 12.5px; font-weight: 600; }
+.gm-aw-txt p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.gm-aw-when {
+  display: block;
+  margin-top: 5px;
+  font-size: 10px;
+  color: var(--text-3);
+}
+.gm-aw.got .gm-aw-when { color: hsl(var(--hue) 70% 74%); }
+.gm-aw-prog {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+  font-size: 10px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.gm-aw-prog .gm-bar-track { flex: 1; }
+
+/* ───────────────────── SCORES ───────────────────── */
+.gm-table {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--g-radius-sm);
+  overflow: hidden;
+  background: rgb(var(--edge-lo) / .14);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .11);
+}
+.gm-tr {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) .9fr .6fr .7fr 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+  box-shadow: inset 0 -1px 0 rgb(var(--edge-hi) / .07);
+  transition: background 140ms linear;
+}
+.gm-tr:last-child { box-shadow: none; }
+.gm-tr:not(.gm-th):hover { background: rgb(var(--edge-hi) / .08); }
+.gm-th {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  cursor: default;
+  background: rgb(var(--edge-lo) / .12);
+}
+.gm-th:hover { background: rgb(var(--edge-lo) / .12); }
+.gm-td-game { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 550; }
+.gm-td-ico { display: flex; opacity: .6; flex: none; }
+.gm-td-tag {
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.gm-th .gm-td-tag { display: none; }
+.gm-td-unit { font-size: 10px; color: var(--text-3); }
+.gm-td-when { color: var(--text-3); font-size: 11px; }
+
+.gm-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px;
+}
+.gm-fact { padding: 12px 14px; }
+.gm-fact > b { display: block; font-size: 12.5px; margin-bottom: 7px; }
+.gm-fact-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 0;
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+.gm-fact-row b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* ───────────────────── THE LOCKER ─────────────────────
+   A sheet over the stage, not a screen of its own: the board stays
+   visible behind it, and a look applies live. */
+.gm-locker {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  bottom: 12px;
+  z-index: 6;
+  width: min(272px, calc(100% - 24px));
+  padding: 12px;
+  overflow-y: auto;
+  border-radius: var(--g-radius);
+  animation: gmSheet 260ms var(--ease) both;
+}
+@keyframes gmSheet {
+  from { opacity: 0; transform: translateX(14px); }
+}
+.gm-lk-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.gm-lk-head b { font-size: 13px; font-weight: 600; }
+.gm-lk-cat {
+  margin: 12px 0 6px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.gm-lk-row { display: flex; flex-direction: column; gap: 3px; }
+.gm-lk-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  border-radius: var(--g-radius-xs);
+  font-size: 12px;
+  text-align: left;
+  color: var(--text);
+  cursor: default;
+  transition: background 140ms linear;
+}
+.gm-lk-item:hover { background: rgb(var(--edge-hi) / .1); }
+.gm-lk-item.on {
+  background: linear-gradient(120deg, hsl(var(--accent) / .26), rgb(var(--edge-hi) / .07));
+  box-shadow: inset 0 0 0 .5px hsl(var(--accent) / .45);
+}
+.gm-lk-item.locked { opacity: .5; }
+.gm-lk-item.locked:hover { background: none; }
+.gm-lk-swatch {
+  flex: none;
+  display: flex;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--g-radius-2xs);
+  overflow: hidden;
+  background: rgb(var(--edge-lo) / .28);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .16);
+}
+.gm-lk-swatch svg { width: 100%; height: 100%; }
+.gm-lk-name { flex: none; font-weight: 550; }
+.gm-lk-note {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--text-3);
+}
+.gm-lk-lock { flex: none; display: flex; opacity: .6; }
+.gm-lockbtn.on {
+  color: hsl(var(--accent) / 1);
+  box-shadow: inset 0 0 0 .5px hsl(var(--accent) / .5);
+}
+
+/* ── what a finished run earned you, on the end card ── */
+.gm-over-earn {
+  margin-top: 12px;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  box-shadow: inset 0 1px 0 rgb(var(--edge-hi) / .12);
+}
+.gm-earn-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 550;
+  color: hsl(var(--accent) / 1);
+}
+.gm-earn-ico { display: flex; }
+
+.gm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+  gap: 12px;
+}
+
+.gm-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  cursor: default;
+  color: var(--text);
+  transition: transform 220ms var(--ease), box-shadow 220ms var(--ease);
+}
+.gm-tile:hover { transform: translateY(-3px); }
+.gm-tile:hover .gm-art { opacity: 1; }
+.gm-tile:hover .gm-art::after { opacity: .9; }
+.gm-tile:active { transform: translateY(-1px) scale(.995); }
+
+/* the little sigil, sitting in its own lit well */
+.gm-art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 92px;
+  opacity: .8;
+  color: hsl(var(--accent) / .95);
+  background:
+    radial-gradient(120% 140% at 30% -10%, hsl(var(--accent) / .22), transparent 62%),
+    radial-gradient(120% 140% at 85% 110%, hsl(var(--accent-2) / .2), transparent 60%),
+    rgb(var(--edge-lo) / .16);
+  box-shadow: inset 0 -1px 0 rgb(var(--edge-hi) / .12);
+  transition: opacity 220ms var(--ease);
+}
+.gm-art svg { width: 108px; height: 68px; }
+.gm-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: .5;
+  background: linear-gradient(112deg,
+    transparent 32%, rgb(var(--edge-hi) / .16) 47%, transparent 60%);
+  transition: opacity 260ms var(--ease);
+  pointer-events: none;
+}
+
+.gm-tname {
+  padding: 12px 14px 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -.005em;
+}
+.gm-tblurb {
+  padding: 3px 14px 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+  flex: 1;
+}
+.gm-tfoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 14px 13px;
+  font-size: 10.5px;
+}
+.gm-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 8px;
+  border-radius: var(--r-pill);
+  font-weight: 650;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  background: rgb(var(--edge-hi) / .1);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .16);
+}
+.gm-tbest { color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+/* ───────────────────── THE PLAY VIEW ───────────────────── */
+.gm-play { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+
+.gm-bar { gap: 7px; }
+.gm-title { font-size: 13px; font-weight: 600; white-space: nowrap; }
+
+.gm-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  background: rgb(var(--edge-lo) / .16);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .14);
+}
+.gm-lab {
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.gm-num {
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.01em;
+}
+
+.gm-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow: hidden;
+}
+.gm-canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+
+.gm-foot { justify-content: space-between; }
+.gm-hint { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gm-status { color: hsl(var(--accent) / .95); font-weight: 600; flex: none; }
+
+@keyframes gmShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(2px); }
+}
+.gm-shake { animation: gmShake 400ms var(--ease); }
+html[data-motion="off"] .gm-shake { animation: none; }
+
+/* ── the end card ── */
+.gm-over {
+  position: absolute;
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  width: min(300px, calc(100% - 32px));
+  padding: 22px 20px 18px;
+  border-radius: var(--g-radius);
+  text-align: center;
+  animation: gmOver 320ms var(--ease-back) both;
+}
+@keyframes gmOver {
+  from { opacity: 0; transform: translate(-50%, -46%) scale(.9); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.gm-over-mark {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+  color: hsl(var(--accent) / 1);
+}
+.gm-over b { display: block; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+.gm-over p {
+  margin: 5px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-2);
+  min-height: 0;
+}
+.gm-over-score {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.gm-over-score b {
+  display: inline;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.gm-over-new {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: hsl(var(--ok) / 1);
+}
+.gm-over-btns { display: flex; gap: 8px; margin-top: 16px; }
+.gm-over-btns .g-btn { flex: 1; }
+
+/* ═════════════════ FUSE (2048) ═════════════════ */
+.gm-boardwrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* The gutter is a fixed 8px rather than a percentage, and that is the
+   whole trick: the wells are grid items and the tiles are absolutely
+   positioned, so the two only line up if every measurement resolves
+   against the same box. A percentage cannot manage that — a grid gap
+   resolves against the container's content box and a transform
+   against the element itself — and container units cannot either,
+   since a container's own padding resolves against its *ancestor*.
+   One fixed length, and .gm-tiles inset to match, and they agree. */
+.gm-board {
+  --gut: 8px;
+  position: relative;
+  width: min(100%, 100cqh, 440px);
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--gut);
+  padding: var(--gut);
+  border-radius: var(--g-radius);
+  background: rgb(var(--edge-lo) / .2);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .16),
+              inset 0 2px 14px -6px rgb(var(--edge-lo) / .8);
+  transition: transform 160ms var(--ease);
+}
+/* the board leans when a move does nothing — the cheapest possible
+   way to say "that direction is full" without a message */
+.gm-board.nudge-left  { transform: translateX(-5px); }
+.gm-board.nudge-right { transform: translateX(5px); }
+.gm-board.nudge-up    { transform: translateY(-5px); }
+.gm-board.nudge-down  { transform: translateY(5px); }
+
+.gm-well {
+  border-radius: var(--g-radius-sm);
+  background: rgb(var(--edge-hi) / .05);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .07);
+}
+/* inset by the gutter, so this layer *is* the board's content box */
+.gm-tiles {
+  position: absolute;
+  inset: var(--gut);
+  container-type: inline-size;
+  pointer-events: none;
+}
+
+.gm-ftile {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc((100% - 3 * var(--gut)) / 4);
+  height: calc((100% - 3 * var(--gut)) / 4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--g-radius-sm);
+  font-weight: 650;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  transform: translate(calc(var(--c) * (100% + var(--gut))),
+                       calc(var(--r) * (100% + var(--gut))));
+  transition: transform 130ms var(--ease);
+  backdrop-filter: blur(10px) saturate(170%) brightness(1.06);
+  -webkit-backdrop-filter: blur(10px) saturate(170%) brightness(1.06);
+  box-shadow:
+    inset 0 1px 7px -4px rgb(var(--refract-cool) / .7),
+    inset 0 0 0 .5px rgb(var(--edge-hi) / .3),
+    0 4px 12px -7px rgb(var(--edge-lo) / .7);
+  background: linear-gradient(155deg,
+    hsl(var(--th, 196) var(--sa, 92%) 66% / .5),
+    hsl(var(--th, 196) var(--sa, 92%) 56% / .26));
+  font-size: clamp(14px, 6.4cqw, 30px);
+}
+.gm-ftile span { display: block; }
+
+/* Each rung of the ladder gets its own hue, walking the wheel, so
+   how far you are along is legible as colour before it is as number.
+   Which wheel it walks is the palette skin, written on as --th/--sa
+   by js/games/tiles.js. */
+.gm-ftile[data-v="1024"] span,
+.gm-ftile[data-v="2048"] span,
+.gm-ftile[data-v="big"] span { font-size: .78em; }
+.gm-ftile[data-v="128"] span,
+.gm-ftile[data-v="256"] span,
+.gm-ftile[data-v="512"] span { font-size: .86em; }
+
+.gm-ftile[data-v="2048"], .gm-ftile[data-v="big"] {
+  box-shadow:
+    inset 0 1px 7px -4px rgb(var(--refract-cool) / .8),
+    inset 0 0 0 .5px rgb(var(--edge-hi) / .45),
+    0 0 22px -6px hsl(var(--th, 196) var(--sa, 92%) 66% / .8);
+}
+
+@keyframes gmPopIn { from { transform: scale(.2); opacity: 0; } }
+@keyframes gmPop { 50% { scale: 1.14; } }
+.gm-ftile.pop-in { animation: gmPopIn 190ms var(--ease-back) both; }
+.gm-ftile.pop { animation: gmPop 190ms var(--ease); }
+html[data-motion="off"] .gm-ftile { transition: none; animation: none; }
+
+/* ═════════════════ MINES ═════════════════ */
+.gm-mwrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.gm-mhead {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.gm-mflags {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  background: rgb(var(--edge-lo) / .16);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .14);
+}
+.gm-mflags svg { color: hsl(var(--accent-2) / 1); }
+
+/* its own query container, so the board can be sized against the
+   space actually left under the difficulty row */
+.gm-mfield {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gm-mines {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  gap: 2px;
+  padding: 7px;
+  border-radius: var(--g-radius-sm);
+  background: rgb(var(--edge-lo) / .2);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .16);
+  /* whichever of width or height runs out first decides — the one
+     formulation that keeps the cells square in both directions */
+  aspect-ratio: var(--cols) / var(--rows);
+  width: min(100cqw, calc(100cqh * var(--cols) / var(--rows)));
+  touch-action: manipulation;
+}
+.gm-cell {
+  aspect-ratio: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--g-radius-2xs);
+  font-size: clamp(8px, 1.6cqmin, 14px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  cursor: default;
+  background: linear-gradient(160deg,
+    rgb(var(--edge-hi) / .16), rgb(var(--edge-hi) / .07));
+  box-shadow: inset 0 .5px 0 rgb(var(--edge-hi) / .28),
+              inset 0 0 0 .5px rgb(var(--edge-hi) / .1);
+  transition: background 120ms linear, transform 120ms var(--ease);
+}
+.gm-cell:hover { background: rgb(var(--edge-hi) / .26); }
+.gm-cell:active { transform: scale(.93); }
+/* An opened cell has to read as *gone*, not as a slightly different
+   button — the whole board is scanned at a glance. */
+.gm-cell.open {
+  background: rgb(var(--edge-lo) / .26);
+  box-shadow: inset 0 1px 4px -2px rgb(var(--edge-lo) / .8);
+}
+.gm-cell.open:hover { background: rgb(var(--edge-lo) / .26); }
+.gm-cell.flag { color: hsl(var(--hue, 282) 92% 74%); }
+.gm-cell.mine {
+  background: rgb(var(--edge-lo) / .3);
+  color: hsl(var(--hue, 210) 20% 72%);
+}
+.gm-cell.hit {
+  background: hsl(var(--danger) / .5);
+  color: var(--text);
+  box-shadow: 0 0 16px -3px hsl(var(--danger) / .9);
+}
+.gm-cell.wrong { color: hsl(var(--danger) / 1); opacity: .6; }
+
+/* The numbers carry the whole game, so they are coloured by count —
+   the classic scheme, translated into this palette. */
+.gm-cell[data-n="1"] { color: hsl(206 96% 70%); }
+.gm-cell[data-n="2"] { color: hsl(150 72% 58%); }
+.gm-cell[data-n="3"] { color: hsl(358 88% 70%); }
+.gm-cell[data-n="4"] { color: hsl(268 92% 76%); }
+.gm-cell[data-n="5"] { color: hsl(26 95% 66%); }
+.gm-cell[data-n="6"] { color: hsl(178 80% 60%); }
+.gm-cell[data-n="7"] { color: hsl(320 84% 72%); }
+.gm-cell[data-n="8"] { color: var(--text-2); }
+
+/* ═════════════════ FACETS (memory) ═════════════════ */
+.gm-matchwrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gm-match {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  gap: 8px;
+  aspect-ratio: 3 / 2;
+  width: min(100%, 560px, calc(100cqh * 3 / 2));
+  perspective: 1100px;
+}
+.gm-card {
+  position: relative;
+  min-width: 0;
+  border-radius: var(--g-radius-sm);
+  transform-style: preserve-3d;
+  transition: transform 380ms var(--ease-back), opacity 300ms linear;
+  cursor: default;
+}
+.gm-card.up, .gm-card.done { transform: rotateY(180deg); }
+/* The fade goes on the face, never on the card: any opacity below 1
+   flattens the card's preserve-3d, and a flattened card shows you its
+   back through the front. */
+.gm-card.done .gm-front { opacity: .5; }
+.gm-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--g-radius-sm);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.gm-back {
+  color: var(--text-3);
+  background: linear-gradient(155deg,
+    rgb(var(--edge-hi) / .17), rgb(var(--edge-hi) / .06));
+  box-shadow: inset 0 .5px 0 rgb(var(--edge-hi) / .3),
+              inset 0 0 0 .5px rgb(var(--edge-hi) / .12);
+}
+.gm-front {
+  transform: rotateY(180deg);
+  font-size: clamp(18px, 3.4vw, 32px);
+  color: hsl(var(--hue) 90% 78%);
+  background: linear-gradient(155deg,
+    hsl(var(--hue) 88% 62% / .4), hsl(var(--hue) 88% 52% / .16));
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  box-shadow: inset 0 1px 8px -4px rgb(var(--refract-cool) / .7),
+              inset 0 0 0 .5px rgb(var(--edge-hi) / .34),
+              0 0 18px -8px hsl(var(--hue) 90% 62% / .9);
+}
+html[data-motion="off"] .gm-card { transition: none; }
+
+/* ═════════════════ ECHO ═════════════════ */
+.gm-echowrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+}
+.gm-echo {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: min(100%, 100cqh, 340px);
+  aspect-ratio: 1;
+}
+.gm-echo.busy { pointer-events: none; }
+/* Telling the four panes apart *is* the game, so these carry more
+   tint than anything else in the system — a pane you cannot name is
+   a pane you cannot repeat. */
+.gm-pad {
+  min-width: 0;
+  border-radius: var(--g-radius-sm);
+  cursor: default;
+  background: linear-gradient(155deg,
+    hsl(var(--hue) 90% 58% / .52), hsl(var(--hue) 90% 46% / .3));
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  box-shadow: inset 0 1px 10px -5px rgb(var(--refract-cool) / .8),
+              inset 0 0 0 .5px rgb(var(--edge-hi) / .26);
+  transition: background 90ms linear, box-shadow 160ms var(--ease),
+              transform 120ms var(--ease);
+}
+.gm-pad:nth-child(1) { border-top-left-radius: 60%; }
+.gm-pad:nth-child(2) { border-top-right-radius: 60%; }
+.gm-pad:nth-child(3) { border-bottom-left-radius: 60%; }
+.gm-pad:nth-child(4) { border-bottom-right-radius: 60%; }
+.gm-pad:hover { background: hsl(var(--hue) 90% 62% / .62); }
+.gm-pad:active, .gm-pad.lit {
+  background: linear-gradient(155deg,
+    hsl(var(--hue) 92% 72% / .9), hsl(var(--hue) 92% 60% / .6));
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .55),
+              0 0 34px -4px hsl(var(--hue) 92% 66% / .95);
+  transform: scale(.985);
+}
+.gm-pad.wrong {
+  background: hsl(var(--danger) / .6);
+  box-shadow: 0 0 30px -4px hsl(var(--danger) / .95);
+}
+.gm-echo-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 27%;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border-radius: var(--r-round);
+  pointer-events: none;
+  background: rgb(var(--edge-lo) / .34);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  box-shadow: inset 0 1px 8px -4px rgb(var(--refract-cool) / .6),
+              inset 0 0 0 .5px rgb(var(--edge-hi) / .24);
+}
+.gm-echo-round { font-size: 21px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.gm-echo-core span {
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.gm-echo-start { position: absolute; bottom: 20px; }
+
+/* ───────────────────── SMALL SCREENS ───────────────────── */
+@media (max-width: 560px) {
+  .gm-shelf { padding: 14px 14px 20px; }
+  .gm-headrow { flex-direction: column; gap: 10px; }
+  .gm-tabs { width: 100%; }
+  .gm-tab { flex: 1; justify-content: center; padding: 0 6px; font-size: 11.5px; }
+  .gm-awgrid { grid-template-columns: 1fr; }
+  .gm-tr { grid-template-columns: minmax(0, 1.6fr) .9fr .6fr; }
+  .gm-tr > :nth-child(4), .gm-tr > :nth-child(5) { display: none; }
+  .gm-locker { left: 12px; width: auto; }
+  .gm-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .gm-art { height: 70px; }
+  .gm-art svg { width: 86px; height: 54px; }
+  .gm-stage { padding: 8px; }
+  .gm-bar { gap: 5px; padding: 8px; }
+  .gm-title { display: none; }
+  .gm-foot .gm-hint { display: none; }
+}
+
+/* The whole play view is one query container, so a board can be sized
+   against the stage rather than the viewport. */
+.gm-stage { container-type: size; }

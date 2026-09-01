@@ -44,7 +44,13 @@
     "Ctrl+L": "Lock the screen",
     "Ctrl+,": "Settings",
     "Alt+Tab": "Cycle windows",
-    "Escape": "Minimise / dismiss"
+    "Escape": "Minimise / dismiss",
+    "Ctrl+Alt+=": "Zoom the desktop in",
+    "Ctrl+Alt+-": "Zoom the desktop out",
+    "Ctrl+Alt+0": "Desktop to actual size",
+    "Ctrl+Shift+=": "Zoom this window in",
+    "Ctrl+Shift+-": "Zoom this window out",
+    "Ctrl+Shift+0": "This window to actual size"
   };
 
   var actions = {
@@ -235,9 +241,48 @@
         DS.wm.open("calendar", { compose: true });
       }],
       ["note:new", "New note", "notes", function () { DS.wm.open("notes"); }],
-      ["term:new", "Open the shell", "terminal", function () { DS.wm.open("terminal"); }]
+      ["term:new", "Open the shell", "terminal", function () { DS.wm.open("terminal"); }],
+      ["zoom:in", "Zoom in", "zoomIn", function () { DS.zoom.step(1); }],
+      ["zoom:out", "Zoom out", "zoomOut", function () { DS.zoom.step(-1); }],
+      ["zoom:reset", "Actual size", "search", function () { DS.zoom.reset(); }],
+      ["zoom:winin", "Zoom this window in", "zoomIn", function () {
+        DS.zoom.stepWin(DS.wm.focused(), 1);
+      }],
+      ["zoom:winout", "Zoom this window out", "zoomOut", function () {
+        DS.zoom.stepWin(DS.wm.focused(), -1);
+      }],
+      ["zoom:winreset", "This window to actual size", "refresh", function () {
+        DS.zoom.setWin(DS.wm.focused(), 100);
+      }],
+      ["zoom:all", "Reset every zoom", "refresh", function () {
+        DS.zoom.resetAll();
+        DS.ui.toast({ icon: "refresh", title: "Everything back to 100%" });
+      }],
+      ["bug:new", "Report a bug", "bug", function () { DS.bugs.open(); }],
+      ["bug:list", "Bug reports", "doc", function () { DS.bugs.open({ pane: "filed" }); }],
+      ["bug:diag", "System diagnostics", "cpu", function () {
+        DS.bugs.open({ pane: "diag" });
+      }],
+      ["bug:show", "Show or hide the bug", "eye", function () {
+        var v = !DS.store.get("bugs.show", true);
+        DS.store.set("bugs.show", v);
+        DS.bugs.paintDot();
+        DS.ui.toast({ icon: "bug", title: "The bug is " + (v ? "back" : "hidden") });
+      }]
     ].forEach(function (a) {
       actions.register({ id: a[0], label: a[1], icon: a[2], group: "System", run: a[3] });
+    });
+
+    /* Every language is an action, so switching is one Ctrl+K away and
+       can be bound to a key like anything else. */
+    DS.LANGS.forEach(function (l) {
+      actions.register({
+        id: "lang:" + l.id,
+        label: "Language: " + l.native + (l.id === "en" ? "" : " (" + l.name + ")"),
+        icon: "globe",
+        group: "Language",
+        run: function () { DS.i18n.set(l.id); }
+      });
     });
   }
 

@@ -62,7 +62,11 @@
     // an actionable card waits longer, since it is asking to be used
     if (life) timer = setTimeout(dismiss, act ? Math.max(life, 9000) : life);
     // ...and stops counting down while you are reading it
-    card.addEventListener("pointerenter", function () {
+    card.addEventListener("pointerenter", function (e) {
+      // A finger fires pointerenter and then, often, never
+      // pointerleave — so pausing on touch would freeze the card on
+      // screen. Reading it is not a gesture touch can express.
+      if (e.pointerType === "touch") return;
       if (timer) { clearTimeout(timer); timer = null; }
     });
     card.addEventListener("pointerleave", function () {
@@ -97,16 +101,23 @@
     });
   }
 
+  /* x and y arrive as viewport coordinates — usually straight off a
+     pointer event — but the menu lives inside the desktop, which may be
+     zoomed. Everything here is therefore converted into the desktop's
+     own coordinates first; at 100% the conversion is the identity. */
   function placeIn(node, x, y) {
-    // keep the menu inside the viewport
     node.style.left = "0px";
     node.style.top = "0px";
     node.hidden = false;
-    var r = node.getBoundingClientRect();
-    var maxX = window.innerWidth - r.width - 8;
-    var maxY = window.innerHeight - r.height - 8;
-    node.style.left = DS.clamp(x, 8, Math.max(8, maxX)) + "px";
-    node.style.top = DS.clamp(y, 8, Math.max(8, maxY)) + "px";
+    var r = DS.zoom ? DS.zoom.rect(node) : node.getBoundingClientRect();
+    var vw = DS.zoom ? DS.zoom.vw() : window.innerWidth;
+    var vh = DS.zoom ? DS.zoom.vh() : window.innerHeight;
+    var px = DS.zoom ? DS.zoom.x(x) : x;
+    var py = DS.zoom ? DS.zoom.y(y) : y;
+    var maxX = vw - r.width - 8;
+    var maxY = vh - r.height - 8;
+    node.style.left = DS.clamp(px, 8, Math.max(8, maxX)) + "px";
+    node.style.top = DS.clamp(py, 8, Math.max(8, maxY)) + "px";
   }
 
   var openMenu = null;

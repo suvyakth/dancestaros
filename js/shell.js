@@ -53,6 +53,53 @@
     });
   }
 
+  /* Languages, as menu rows. The same list is offered from the system
+     menu and from the globe in the menu bar. */
+  function langItems() {
+    var cur = DS.i18n.id();
+    return DS.LANGS.map(function (l) {
+      return {
+        label: l.native + (l.id === cur ? "" : "  ·  " + l.name),
+        icon: l.id === cur ? "check" : "globe",
+        action: function () {
+          DS.i18n.set(l.id);
+          DS.ui.toast({
+            icon: "globe", title: l.native,
+            body: l.id === "en"
+              ? "Back to the original English."
+              : "Interface phrases swapped where the phrase book has them. " +
+                "Settings › Language shows what is missing.",
+            timeout: 5000,
+            action: {
+              label: "Language settings",
+              run: function () { DS.wm.open("settings", { pane: "language" }); }
+            }
+          });
+        }
+      };
+    });
+  }
+
+  /* Labels are kept free of numbers so the phrase book can still match
+     them; the current factor rides on the section title instead, and
+     only when it is worth saying. */
+  function zoomTitle(label, pct) {
+    return { title: pct === 100 ? label : label + "  ·  " + Math.round(pct) + "%" };
+  }
+
+  function zoomItems() {
+    var pct = DS.zoom.pct();
+    return [
+      { label: "Zoom in", icon: "zoomIn", kbd: "Ctrl Alt +",
+        action: function () { DS.zoom.step(1); } },
+      { label: "Zoom out", icon: "zoomOut", kbd: "Ctrl Alt -",
+        action: function () { DS.zoom.step(-1); } },
+      { label: "Actual size", icon: pct === 100 ? "check" : "refresh",
+        kbd: "Ctrl Alt 0", dim: pct === 100,
+        action: function () { DS.zoom.reset(); } }
+    ];
+  }
+
   var MENUS = {
     system: function () {
       return [
@@ -62,21 +109,35 @@
         { sep: true },
         { label: "Tune the Glass…", icon: "layers", action: function () { DS.wm.open("settings", { pane: "glass" }); } },
         { label: "Open Terminal", icon: "terminal", action: function () { DS.wm.open("terminal"); } },
+        { label: "Report a bug", icon: "bug", action: function () { DS.bugs.open(); } },
+        { sep: true },
+        { title: "Language" }
+      ].concat(langItems(), [
         { sep: true },
         { label: "Close All Windows", icon: "x", action: function () {
             DS.wm.list().forEach(function (w) { DS.wm.close(w); });
           } },
         { label: "Restart", icon: "refresh", action: function () { location.reload(); } }
-      ];
+      ]);
     },
     app: function () {
       var win = DS.wm.focused();
       if (!win) return [{ label: "No window open", dim: true }];
+      var wz = DS.zoom.winPct(win);
       return [
         { title: win._app.name },
         { label: "Minimise", icon: "minimize", kbd: "Ctrl M", action: function () { DS.wm.minimize(win); } },
         { label: win.classList.contains("maximized") ? "Restore" : "Maximise",
           icon: "maximize", action: function () { DS.wm.toggleMax(win); } },
+        { sep: true },
+        zoomTitle("Window zoom", wz),
+        { label: "Zoom in", icon: "zoomIn", kbd: "Ctrl Shift +",
+          action: function () { DS.zoom.stepWin(win, 1); } },
+        { label: "Zoom out", icon: "zoomOut", kbd: "Ctrl Shift -",
+          action: function () { DS.zoom.stepWin(win, -1); } },
+        { label: "Actual size", icon: wz === 100 ? "check" : "refresh",
+          kbd: "Ctrl Shift 0", dim: wz === 100,
+          action: function () { DS.zoom.setWin(win, 100); } },
         { sep: true },
         { label: "Close Window", icon: "x", kbd: "Ctrl W", action: function () { DS.wm.close(win); } }
       ];
@@ -85,6 +146,9 @@
       return [
         { title: "Theme" }
       ].concat(themeItems(), [
+        { sep: true },
+        zoomTitle("Zoom", DS.zoom.pct())
+      ], zoomItems(), [
         { sep: true },
         { label: (DS.store.get("refraction") ? "Disable" : "Enable") + " true refraction",
           icon: "eye",
@@ -100,12 +164,35 @@
           } }
       ]);
     },
+    /* Phone only. Four menu-bar buttons do not fit beside a clock on a
+       390px screen, so App, View and Help fold into one — the same
+       item lists, concatenated, in a menu that scrolls. */
+    more: function () {
+      var win = DS.wm.focused();
+      var out = [];
+      if (win) out = out.concat(MENUS.app(), [{ sep: true }]);
+      return out.concat(
+        [{ title: "View" }], themeItems(),
+        [zoomTitle("Zoom", DS.zoom.pct())], zoomItems(),
+        [{ sep: true }, { title: "Help" }],
+        [
+          { label: "Take the guided tour", icon: "star",
+            action: function () { DS.tour.start(); } },
+          { label: "Report a bug", icon: "bug",
+            action: function () { DS.bugs.open(); } },
+          { label: "About This System", icon: "about",
+            action: function () { DS.wm.open("about"); } }
+        ]
+      );
+    },
     help: function () {
       return [
         { label: "Take the guided tour", icon: "star",
           action: function () { DS.tour.start(); } },
         { label: "Show me the glass", icon: "layers",
           action: function () { DS.demo.dispersion(); } },
+        { label: "Report a bug", icon: "bug",
+          action: function () { DS.bugs.open(); } },
         { sep: true },
         { title: "Keyboard" },
         { label: "Launcher", kbd: "Ctrl K", dim: true },
@@ -113,6 +200,8 @@
         { label: "Close window", kbd: "Ctrl W", dim: true },
         { label: "Minimise window", kbd: "Ctrl M", dim: true },
         { label: "Settings", kbd: "Ctrl ,", dim: true },
+        { label: "Zoom the desktop", kbd: "Ctrl Alt ±", dim: true },
+        { label: "Zoom this window", kbd: "Ctrl Shift ±", dim: true },
         { sep: true },
         { label: "Read the welcome file", icon: "doc", action: function () {
             DS.openPath("/Users/you/Documents/Welcome.txt");
@@ -160,6 +249,29 @@
     ]);
   }
 
+  /* The globe carries the current language as two letters, because a
+     globe alone does not tell you which language you are already in. */
+  shell.paintLangPill = function () {
+    var btn = DS.qs("#mb-lang");
+    if (!btn) return;
+    var l = DS.i18n.def();
+    var tag = DS.qs(".mb-tag", btn);
+    if (tag) tag.textContent = l.id.toUpperCase();
+    btn.title = l.native + " — click to change language";
+  };
+
+  /* The zoom readout only exists while the desktop is not at 100%, so
+     it is a state you can see rather than one you have to remember. */
+  shell.paintZoomPill = function () {
+    var pill = DS.qs("#mb-zoom");
+    if (!pill) return;
+    var pct = Math.round(DS.zoom.pct());
+    pill.hidden = pct === 100;
+    var num = DS.qs(".mb-tag", pill);
+    if (num) num.textContent = pct + "%";
+    pill.title = "Desktop at " + pct + "% — click for actual size";
+  };
+
   function wireMenuBar() {
     DS.qsa("[data-menu]").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -168,6 +280,28 @@
     });
     DS.qs("#mb-search").addEventListener("click", function () { shell.launcher(true); });
     DS.qs("#mb-glass").addEventListener("click", controlCentre);
+
+    var lang = DS.qs("#mb-lang");
+    lang.addEventListener("click", function () {
+      DS.ui.pop(lang, [{ title: "Interface language" }].concat(langItems(), [
+        { sep: true },
+        { label: "Language settings…", icon: "settings",
+          action: function () { DS.wm.open("settings", { pane: "language" }); } }
+      ]));
+    });
+
+    var zpill = DS.qs("#mb-zoom");
+    zpill.addEventListener("click", function () { DS.zoom.reset(); });
+    zpill.addEventListener("contextmenu", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      DS.ui.ctx(e.clientX, e.clientY,
+        [zoomTitle("Zoom", DS.zoom.pct())].concat(zoomItems(), [
+        { sep: true },
+        { label: "All zoom settings…", icon: "settings",
+          action: function () { DS.wm.open("settings", { pane: "zoom" }); } }
+      ]));
+    });
     DS.qs("#mb-avatar").addEventListener("click", function () {
       profileMenu(DS.qs("#mb-avatar"));
     });
@@ -188,7 +322,7 @@
   function controlCentre() {
     if (ccOpen) { closeCC(); return; }
     var anchor = DS.qs("#mb-glass");
-    var r = anchor.getBoundingClientRect();
+    var r = DS.zoom.rect(anchor);      // the desktop's own coordinates
 
     var quick = [
       { key: "blur", label: "Blur", min: 4, max: 60, step: 1, unit: "px" },
@@ -241,7 +375,7 @@
       onclick: function () { closeCC(); DS.wm.open("settings", { pane: "glass" }); }
     }));
 
-    panel.style.right = Math.max(8, window.innerWidth - r.right - 20) + "px";
+    panel.style.right = Math.max(8, DS.zoom.vw() - r.right - 20) + "px";
     panel.style.top = (r.bottom + 6) + "px";
     DS.qs("#desktop").appendChild(panel);
     DS.glass.dress(panel);
@@ -375,15 +509,18 @@
     var NEAR = 26;      // fully out
     var FAR = 96;       // start leaning
 
+    /* Distances in the desktop's own pixels, so the thresholds mean the
+       same thing whether or not the desktop is zoomed. */
     function distance(e, pos) {
-      if (pos === "left") return e.clientX;
-      if (pos === "right") return window.innerWidth - e.clientX;
-      return window.innerHeight - e.clientY;
+      if (pos === "left") return DS.zoom.x(e.clientX);
+      if (pos === "right") return DS.zoom.vw() - DS.zoom.x(e.clientX);
+      return DS.zoom.vh() - DS.zoom.y(e.clientY);
     }
 
     document.addEventListener("pointermove", function (e) {
+      if (DS.form.touch()) return;        // no cursor, no proximity
       var d = DS.store.get("dock", {});
-      var hidden = d.autohide ||
+      var hidden = DS.form.dockAutohide() ||
         (d.hideOnMax !== false && document.body.classList.contains("has-max"));
 
       if (!hidden) {
@@ -487,7 +624,8 @@
   shell.applyDockLayout = function () {
     DS.glass.applyDock();
     var d = DS.store.get("dock", {});
-    document.body.dataset.dock = d.autohide ? "hidden" : (d.position || "bottom");
+    document.body.dataset.dock =
+      DS.form.dockAutohide() ? "hidden" : (d.position || "bottom");
   };
 
   /* ───────────────────── DESKTOP ICONS ───────────────────── */
@@ -807,6 +945,37 @@
         shell.lockScreen();
         return;
       }
+
+      /* Zoom. Ctrl+Alt scales the desktop, Ctrl+Shift scales the window
+         in front. Ctrl+plus on its own is the browser's, and browsers do
+         not let that one go — so neither pair fights it.
+
+         The key can arrive as "+", "=", "Add" or, on some layouts,
+         nothing recognisable at all, which is why e.code is the
+         fallback. */
+      if (mod && (e.altKey || e.shiftKey) && !(e.altKey && e.shiftKey)) {
+        var win = DS.wm.focused();
+        var perWin = e.shiftKey;
+        var plus = e.key === "+" || e.key === "=" || e.code === "Equal" ||
+                   e.key === "Add" || e.code === "NumpadAdd";
+        var minus = e.key === "-" || e.key === "_" || e.code === "Minus" ||
+                    e.key === "Subtract" || e.code === "NumpadSubtract";
+        var zero = e.key === "0" || e.code === "Digit0" || e.code === "Numpad0";
+        if (plus || minus || zero) {
+          e.preventDefault();
+          if (perWin) {
+            if (!win) {
+              DS.ui.toast({ icon: "info", title: "No window in front",
+                            body: "Window zoom needs a window.", timeout: 2600 });
+            } else if (zero) DS.zoom.setWin(win, 100);
+            else DS.zoom.stepWin(win, plus ? 1 : -1);
+          } else {
+            if (zero) DS.zoom.reset();
+            else DS.zoom.step(plus ? 1 : -1);
+          }
+          return;
+        }
+      }
       if (e.key === "Tab" && e.altKey) {
         e.preventDefault();
         DS.wm.cycle();
@@ -856,8 +1025,12 @@
     shell.buildDock();
     shell.buildDesktopIcons();
     shell.paintAvatar();
+    shell.paintLangPill();
     shell.applyDockLayout();
     wireDockPeek();
+    DS.form.init();
+    DS.zoom.init();
+    DS.bugs.init();
 
     DS.glass.applyWallpaper();
     DS.glass.applyLight();

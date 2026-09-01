@@ -48,9 +48,13 @@
       var made = 0;
 
       function resize() {
+        /* The grid is measured in layout pixels, because that is what
+           the canvas is sized in — so a zoomed window must not be read
+           as a bigger stage. */
+        var z = DS.zoom ? DS.zoom.of(stage) : 1;
         var r = stage.getBoundingClientRect();
-        var cw = Math.max(80, Math.floor(r.width / CELL));
-        var ch = Math.max(60, Math.floor(r.height / CELL));
+        var cw = Math.max(80, Math.floor(r.width / z / CELL));
+        var ch = Math.max(60, Math.floor(r.height / z / CELL));
         var old = grid, oldW = W, oldH = H;
 
         W = cw; H = ch;
@@ -215,9 +219,10 @@
       /* ── input ── */
       function cellFrom(e) {
         var r = canvas.getBoundingClientRect();
+        var s = CELL * (DS.zoom ? DS.zoom.of(canvas) : 1);
         return {
-          x: Math.floor((e.clientX - r.left) / CELL),
-          y: Math.floor((e.clientY - r.top) / CELL)
+          x: Math.floor((e.clientX - r.left) / s),
+          y: Math.floor((e.clientY - r.top) / s)
         };
       }
       canvas.addEventListener("pointerdown", function (e) {

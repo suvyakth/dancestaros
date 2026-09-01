@@ -160,7 +160,9 @@ straight lines are what make refraction legible.
 | **Calendar** | Month, week and agenda views, reminders, .ics import and export. |
 | **Clock** | World clocks, alarms, stopwatch, countdown timer. |
 | **Focus** | Flowmodoro and Pomodoro over one shared engine. |
+| **Games** | Seven small games on one shared harness, with achievements and unlockable looks — Serpent, Fuse, Mines, Facets, Prism, Echo and Flit. |
 | **About** | Live frame rate, glass-surface count, and a breakdown of the five layers. |
+| **Bug Reporter** | Writes a report that already knows the state of the machine, and keeps every one you file as Markdown in Documents. |
 
 The file system is shared, which is what makes this feel like an OS rather than
 a page of unrelated widgets: write a note in **Notes**, then `cat` it in
@@ -253,6 +255,95 @@ with oscillators - there are still no audio files anywhere in this
 project.
 
 ---
+
+## Games
+
+Seven games, one window. They are separate because a dock with seven
+game icons in it is a worse dock, and together because they share a
+harness worth sharing.
+
+| Game | | |
+|------|---|---|
+| **Serpent** | Arcade | Snake, drawn as one stroked polyline through the cell centres — the head is lerped out of its old cell and the tail into its new one across each tick, so it glides instead of stepping. |
+| **Fuse** | Puzzle | 2048. The tiles are DOM, not canvas, so each one gets a real `backdrop-filter` and the wallpaper bends through all sixteen. |
+| **Mines** | Logic | Minesweeper, with the two rules that make it a game rather than a coin toss: mines are laid *after* the first click, around it, and a satisfied number can be chorded. |
+| **Facets** | Memory | Twelve pairs behind panes that turn over in real 3D. One hue per pair, so the state of the board is readable without counting. |
+| **Prism** | Arcade | Breakout. The bricks are a band of the spectrum and shatter into falling shards; where the bead lands across the lens sets the angle it leaves at. |
+| **Echo** | Memory | Simon on four panes of coloured glass. The four tones are a pentatonic set, so every sequence is a tune — which turns out to be a real memory aid. |
+| **Flit** | Arcade | Flappy Bird, where the obstacles are panes of glass and the bird is a bead of light that leaves a trail. The opening gate of every run is dead centre — being dealt a corner gap before you have felt the weight of the thing is a coin toss, not difficulty. |
+
+Best scores live under one key (`games.best`), and a game declares which
+direction is an improvement: Serpent counts up, Mines and Facets count
+down. Mines files a time only when you win.
+
+### Progression
+
+The shelf has three tabs: **Games**, **Achievements** and **Scores**.
+
+Every game keeps its own tallies — beads eaten, panes broken, fields
+cleared — and both of the things you can earn are thresholds on those
+same counters:
+
+- **39 achievements.** Bronze, silver and gold. Because an achievement
+  is `key >= at` rather than a callback, the wall can draw a real
+  progress bar for each one (`0 / 100 beads`) without any game
+  reporting progress, and re-evaluating the whole list is just
+  comparisons — so it can run on every counter change.
+- **51 unlockable looks.** Serpent's bead becomes an orange, a plum, a
+  star fruit or a prism; its body becomes a worm, neon, glass or ember.
+  Fuse gets four more palettes, Mines new flags and mines, Facets four
+  face sets, Prism new spectra and beads, Echo new tunings and pane
+  colours, Flit new beads and panes. Each is one line of data and no
+  branch in the draw code.
+
+A look is chosen in the **locker** — the palette button in the score
+bar — which is a sheet over the stage rather than a screen of its own,
+so the board stays visible behind it and the change lands on the very
+next frame with no restart.
+
+Unlocks announce themselves as notifications that take you to the right
+place, and a finished run lists what it earned on the end card.
+
+```js
+DS.awards.stat("snake", "beads");      // a counter went up
+DS.awards.check();                     // anything newly true is banked
+DS.awards.skin("snake", "fruit");      // the look to draw with
+```
+
+`DS.awards.settle()` runs at boot to bank whatever an existing save has
+already qualified for *without* firing a notification for each — a save
+from before this existed would otherwise arrive as a wall of toasts.
+
+### The harness
+
+A game is not an app. It gets a stage and a host object, and never
+touches the window, the score bar or teardown:
+
+```js
+DS.games.register({
+  id: "pong", name: "Pong", tag: "Arcade",
+  blurb: "Two paddles.", keys: "W/S and Up/Down",
+  play: function (stage, g) {
+    var cv = g.canvas();            // fits its box, at the right DPR
+    g.key(function (e) { ... });    // only while this window has focus
+    g.loop(function (dt) { ... });  // pauses itself when it does not
+    g.bump(1);                      // score
+    g.stat("rallies");              // a counter, for awards and unlocks
+    g.skin("paddle");               // the look to draw with, read live
+    g.over({ title: "Done" });      // end card, best score, play again
+  }
+});
+```
+
+Everything the host hands out is revocable — `after`, `every`, `loop`,
+`key`, `swipe`, `on`, `canvas` — and all of it is torn down when the
+game is left or the window is closed. Games are the one place a stray
+rAF loop really shows: it would go on running against a dead DOM
+forever. Registering a game also registers a `game:<id>` action, so
+every one of them is searchable, bindable to a key, and reachable from
+`do` in the Terminal, and declaring `skins:` / `awards:` on it registers
+its unlockables and achievements with `DS.awards`.
+
 
 ## Widgets
 
@@ -491,6 +582,184 @@ it is describing.
 
 ---
 
+## On a phone
+
+A desktop metaphor on a 390px screen is not a smaller desktop, it is a
+different machine. Floating windows dragged by a 38px title bar, a dock that
+magnifies under a cursor, tooltips on hover, and right-click as the way into
+half the features — none of that survives being touched with a thumb. So the
+shape of the machine is classified at startup and on every resize, written onto
+`<html>` as `data-form`, `data-orient`, `data-touch` and `data-short`, and both
+CSS and behaviour key off it.
+
+| | |
+|---|---|
+| **Windows** | Below 680px they stop floating and fill the frame between the menu bar and the dock. No cascade, no drag, no resize grips, no maximise button — it is already maximised — and the dock becomes the app switcher. Widen the window past 680 and every open app floats again at the size it originally asked for. |
+| **Menu bar** | App, View and Help fold into one `⋯` menu that scrolls. The clock loses its weekday, the globe loses its language tag. |
+| **Sidebars** | The 186px column in Settings, Clock and the Bug Reporter turns on its side into a scrolling strip of tabs. The three labs get a bottom sheet instead, because their panel holds controls rather than tabs. |
+| **Dock** | Full width, scrolling sideways, always visible. A side dock has nowhere to go on a phone, so it comes back to the bottom. |
+| **Widgets** | They stop being placed and become a column. The stored x/y is left untouched, so going back to a big screen puts every widget back exactly where it was. |
+| **Notches** | `viewport-fit=cover` plus `env(safe-area-inset-*)` on the menu bar, the dock and the beetle. |
+
+**Right-click, without a right button.** Rather than build a second set of menus
+for touch, a long press (520ms, less than 12px of drift) synthesises a real
+`contextmenu` event at the finger. Every menu already in the system therefore
+works on a phone unmodified — including ones added later — and the click that
+arrives on release is swallowed in the capture phase, or it would land on the
+menu that just appeared under the finger and pick its first row.
+
+**Two things that were quietly broken on touch before this**, independent of
+screen size:
+
+- Pointer-event drags need `touch-action: none` on the element or the browser
+  keeps the gesture for panning. Without it a window could not be dragged by a
+  finger at all — on any size of touchscreen.
+- A notification pauses its countdown while the pointer is over it. A finger
+  fires `pointerenter` and then, often, never `pointerleave`, so a tapped
+  notification hung on screen for good. Pausing is now a hover-only behaviour.
+
+Hover states that latch after a tap are dropped under `@media (hover: none)`,
+and `@media (pointer: coarse)` grows the traffic lights, menu rows and title
+bars to sizes a thumb can actually hit. **Settings › Zoom** reports what the
+screen was classified as and lets the tiling be forced on or off.
+
+`100dvh` rather than `100vh`: on a phone `100vh` counts the space behind the
+browser's own chrome, which would put the dock below the fold.
+
+---
+
+## Zoom
+
+Two zooms, kept separate because they answer different questions.
+
+**System zoom** scales the entire shell — menu bar, dock, windows, widgets,
+menus — from 60% to 200%. The desktop keeps its proportions and simply stops
+being small. `Ctrl+Alt` with `+`, `-` or `0`, `Ctrl`+wheel, the slider in
+**Settings › Zoom**, or the readout that appears in the menu bar whenever you
+are not at 100% (click it for actual size). The wallpaper deliberately stays
+out of it: five drifting orbs have no detail to resolve, so scaling them
+would cost GPU time to change nothing.
+
+**Window zoom** scales one window's contents and nothing else. `Ctrl+Shift`
+with `+`, `-` or `0`. It is stored against the app rather than the window, so
+Notes at 140% reopens at 140%, and a dot appears in that window's title bar.
+
+`Ctrl` with `+` or `-` on its own belongs to the browser, which does not give
+it up — so the OS never asks for it, and browser zoom still stacks on top of
+both of these.
+
+### Why `zoom` and not `transform`
+
+The obvious way to scale a page is `transform: scale()`. It is the wrong tool
+here, for a reason specific to this project: **a transform on an ancestor
+creates a backdrop root, and every `backdrop-filter` underneath it stops
+sampling the wallpaper.** That would take the glass out of a glass operating
+system. CSS `zoom` affects layout instead, so the desktop's box shrinks by
+exactly the factor it is painted up by, still measures one viewport, and every
+pane keeps refracting what is behind it.
+
+The cost is arithmetic. Pointer events arrive in viewport pixels while
+`style.left` is written in zoomed ones, so every conversion between the two
+divides by the factor: window dragging and resizing, snap regions, widget
+dragging, menu placement, the specular sheen, the crack and shatter effects,
+the tour spotlight and the dock's proximity detection. `DS.zoom.x()`,
+`.d()`, `.vw()`, `.rect()` and `.of()` do that in one place, and all of them
+return the identity at 100% — which is what keeps the feature from disturbing
+code that never asked about it.
+
+Firefox only grew a spec-compliant `zoom` in 126. Where it is missing the
+factor is pinned at 1 and the pane says so plainly, rather than half-applying
+a scale and leaving the pointer maths lying.
+
+---
+
+## Language
+
+Seven languages: English, Español, Français, Deutsch, हिन्दी, 日本語 and العربية.
+Switch from the globe in the menu bar, the system menu, **Settings › Language**,
+the launcher, `lang <code>` in the shell — or on the first-run wizard's welcome
+card, which is the right place for it since everything after that is read.
+
+### How it works, and what that costs
+
+This OS was written in English and every string in it is a literal sitting in
+the middle of the code that draws it. Rather than tear twelve thousand lines
+apart to hang a key on each one, **the English string is the key**: `i18n.js`
+walks the DOM, swaps the phrases it recognises, and a `MutationObserver`
+catches whatever the apps draw next — so a menu built three clicks from now
+arrives already translated. The original English is kept beside every node it
+touches, so switching language re-translates from the source instead of
+translating a translation.
+
+That buys full coverage of the interface chrome for one file of phrases, and
+it has one honest consequence: **coverage is partial by design.** A phrase
+missing from the book stays English. So the Language pane counts what it has
+actually seen and could not translate, lists those phrases, and lets you type
+the translations in — merged over the built-in book and remembered. There is
+no pretending.
+
+Two places are deliberately excluded. Shell output carries `data-noi18n`,
+because translating `Desktop` to `Escritorio` inside an `ls` listing would
+break the path it just printed; and anything with a digit in it is never
+offered as a gap to fill, because clocks, dates and counters pass through
+every second and are never the same string twice.
+
+### Dates, times and direction
+
+Every clock in this OS was already written `toLocaleTimeString([], …)` — an
+empty locale list, meaning "whatever the browser is set to". Those three
+methods are wrapped once at startup so an empty list means *the chosen*
+locale, and so a 12/24-hour preference can be forced through everywhere at
+once. Wrapping beat editing twenty call sites, and it keeps working for call
+sites written after it. There is also a locale override (`en-GB`, `de-AT`,
+`hi-IN`) and a first-day-of-the-week switch the Calendar reads.
+
+Arabic sets `dir="rtl"` on the root, because that is how the script works, not
+a preference. The structural rows — menu bar, dock, title bars, sidebars — are
+pinned back to `ltr` so you get correctly-rendered Arabic in a layout you still
+recognise, and **Mirror the whole interface** switches those exceptions off for
+anyone who wants the real thing. Keys, paths and numbers stay left-to-right in
+every language.
+
+---
+
+## The bug in the corner
+
+A bead of glass shaped like a beetle sits at the bottom right of the desktop —
+same backdrop, same rim, same dispersion at its edges as any other pane. It
+breathes slowly. Click it and the Bug Reporter opens.
+
+The point of it is that it is already listening. Anything unhandled that
+reaches `window` — a thrown error, a rejected promise, a resource that failed
+to load — is caught, deduplicated (the same error forty times reads as one line
+with a count), and counted on the beetle's back, which stops breathing and
+starts twitching. So the moment something goes wrong, the way to say so is
+already glowing at you instead of needing to be found. The first error also
+raises one notification with a **Report it** button on it; after that the count
+is enough, because a stream of toasts about a broken thing is its own broken
+thing.
+
+A report asks for a title, what happened, steps, and how bad it is. What it
+does *not* ask for is everything a report normally has to drag out of you:
+theme, finish, refraction state, every optical value, zoom, language,
+viewport, which window was in front, what else was open, storage used, the
+user agent, and the errors themselves. **Settings › Bugs** and the reporter's
+Diagnostics pane show the whole of that — there is nothing collected that is
+not on those pages, and there is a *Break something* button so you can watch
+the beetle notice.
+
+Nothing is uploaded anywhere. Filing a report writes it into the file system
+as Markdown under `Documents/Bug Reports`, so it is a file you can open in
+Notes, `cat` in the shell and hand to someone — not a row in a list that only
+one app can read. **Copy as Markdown** puts it on the clipboard.
+
+Right-click the beetle to move it between corners, hide it (the reporter stays
+reachable from Help, the launcher and `bug` in the shell), or squash it. It is
+made of glass, so squashing it cracks the screen instead. From the shell:
+`bug report`, `bug list`, `bug diag`, `bug throw`.
+
+---
+
 ## Shortcuts
 
 | Key | Action |
@@ -500,6 +769,11 @@ it is describing.
 | `Ctrl W` | Close window |
 | `Ctrl M` | Minimise window |
 | `Ctrl ,` | Settings |
+| `Ctrl Alt + / -` | Zoom the desktop by one stop |
+| `Ctrl Alt 0` | Desktop back to 100% |
+| `Ctrl Shift + / -` | Zoom the window in front |
+| `Ctrl Shift 0` | That window back to 100% |
+| `Ctrl` + wheel | Scale the desktop continuously |
 
 Drag a window to the **top** edge to maximise, or a **side** edge to snap to half.
 Double-click a title bar to maximise. Right-click the desktop, dock icons, files,
@@ -523,14 +797,28 @@ css/
   calendar.css      Calendar, and the shortcut recorder
   widgets.css       desktop widgets
   setup.css         setup wizard and greeting screen
+  zoom.css          system zoom, window zoom, the menu-bar readout
+  lang.css          per-script type, right-to-left, the language pane
+  bugs.css          the beetle and the reporter
+  games.css         the Games app: shelf, score bar, the seven boards,
+                    the achievement wall and the locker
 js/
   core/
-    util.js         hyperscript + 50-icon line-art set, avatar presets
+    util.js         hyperscript + line-art icon set, avatar presets
     store.js        persisted state (one localStorage key)
+    lang-data.js    the seven languages and the phrase book
+    i18n.js         the language runtime: DOM translation, locale
+                    wrapping, text direction
+    zoom.js         system + window zoom, and the coordinate helpers
+                    every pointer conversion goes through
     glass.js        optical runtime: tokens, accent, presets, wallpaper,
                     refraction, sheen, dock geometry, perf mode
     fs.js           virtual file system (media-aware)
     lock.js         passcode hashing, the keypad, the challenge dialog
+    bugs.js         error capture, the beetle, filing and diagnostics
+    awards.js       the Games app's memory: per-game counters, the
+                    achievements and unlockable looks that are
+                    thresholds on them
     actions.js      the action registry + the custom shortcut engine
     media.js        IndexedDB blob store, import, export, quota
     time.js         synthesised chimes + the alarm daemon
@@ -538,8 +826,11 @@ js/
     ui.js           menus, dialogs, toasts, glass control factories
     wm.js           app registry + window manager
     widgets.js      desktop widget system
-  apps/*.js         one file per app; settings-panes.js adds the deep
-                    customisation panes via DS.settingsPanes
+  apps/*.js         one file per app; settings-panes.js and
+                    settings-panes2.js add the deep customisation panes
+                    via DS.settingsPanes; games.js is the Games shell
+                    and the harness every game runs on
+  games/*.js        one file per game, registered into DS.games
   shell.js          menu bar, dock, launcher, shortcuts, file router
   setup.js          setup wizard + greeting screen
   boot.js           startup

@@ -66,6 +66,34 @@
     },
     motion: "full",            // "full" | "reduced" | "off"
 
+    /* language. See js/core/i18n.js — the English string is the key,
+       so an unlisted phrase simply stays English. */
+    lang: "en",
+    region: "",                // "" = follow the language's own locale
+    hour12: "auto",            // "auto" | "12" | "24"
+    rtl: true,                 // let an RTL language turn the text around
+    mirror: false,             // ...and flip the structure too. Bolder.
+    phrases: {},               // your own translations: { lang: { en: yours } }
+
+    /* how the shell fits the screen. See js/core/form.js — "auto"
+       means windows fill the frame on a phone and float everywhere
+       else, which is almost always what you want. */
+    layout: { tile: "auto" },   // "auto" | "on" | "off"
+
+    /* zoom. ui is a percentage; apps holds a percentage per app id. */
+    zoom: {
+      ui: 100,
+      apps: {},
+      wheel: true              // Ctrl and the wheel scales the desktop
+    },
+
+    /* the beetle in the corner, and everything it has filed */
+    bugs: {
+      show: true,
+      corner: "br",            // "br" | "bl" | "tr"
+      reports: []              // { id, when, title, what, steps, severity, … }
+    },
+
     /* dock */
     dock: {
       size: 46, position: "bottom", magnify: true,
@@ -107,9 +135,25 @@
       chime: true,
       sessions: []             // { start, ms, mode }
     },
+    /* The Games app. `best` is keyed by game id; `low` games (Mines by
+       time, Facets by turns) store the smallest number, not the
+       largest. `stats` holds the per-game counters that achievements
+       and unlockable looks are thresholds on — see js/core/awards.js */
+    games: {
+      best: {},          // id -> the record
+      plays: {},         // id -> how many runs
+      last: {},          // id -> when it was last played
+      stats: {},         // id -> { beads, merges, bricks, ... }
+      earned: {},        // achievement id -> when
+      seen: {},          // achievement id -> the "new" dot has been cleared
+      skins: {},         // "game:category" -> chosen look
+      skinsSeen: {},     // "game:category:look" -> already announced
+      minesLevel: "medium"
+    },
+
     dockApps: ["finder", "search", "notes", "calendar", "terminal", "focus",
                "clock", "calc", "music", "photos", "imagelab", "audiolab",
-               "videolab", "forge", "settings", "about"],
+               "videolab", "forge", "games", "settings", "about"],
     user: "you",
     fs: null,
     volume: 65,

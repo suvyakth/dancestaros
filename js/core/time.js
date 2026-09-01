@@ -63,6 +63,12 @@
     /** Tiny click — a lap, a tick. */
     tick: function () { note(1568, 0, 0.07, 0.05); },
 
+    /** One arbitrary note. Echo, in the Games app, plays tunes. */
+    tone: function (freq, dur, gain) {
+      note(freq, 0, dur === undefined ? 0.4 : dur,
+           gain === undefined ? 0.14 : gain);
+    },
+
     /** A gesture is needed before audio may start; call from a click. */
     unlock: function () {
       var c = audio();

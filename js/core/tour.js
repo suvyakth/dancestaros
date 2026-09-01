@@ -111,6 +111,35 @@
       }, 700);
     },
 
+    /** Ramp the whole desktop up and back, so "zoom" stops being a word. */
+    zoom: function () {
+      if (!DS.zoom.supported) {
+        DS.ui.toast({
+          icon: "info", title: "No CSS zoom here",
+          body: "This browser cannot scale the desktop. Everything else works."
+        });
+        return;
+      }
+      var was = DS.zoom.pct();
+      DS.ui.toast({
+        icon: "zoomIn", title: "Scaling the whole shell",
+        body: "Menu bar, dock, windows and menus together — not the " +
+              "wallpaper, which has no detail to resolve.",
+        timeout: 3400
+      });
+      glide("zoom.ui", was, 145, 1500, DS.zoom.apply, function () {
+        setTimeout(function () {
+          glide("zoom.ui", 145, was, 1200, DS.zoom.apply, function () {
+            DS.ui.toast({
+              icon: "check", title: "And back to " + was + "%",
+              body: "Ctrl+Alt with plus, minus or zero does this by hand.",
+              timeout: 3000
+            });
+          });
+        }, 1400);
+      });
+    },
+
     snap: function () {
       var win = DS.wm.focused() || DS.wm.open("finder");
       DS.ui.toast({
@@ -219,6 +248,39 @@
       before: function () { DS.wm.open("terminal"); }
     },
     {
+      title: "Make it bigger",
+      body: "Ctrl+Alt with plus or minus scales the entire desktop — menu " +
+            "bar, dock, windows, everything at once. Ctrl+Shift does the " +
+            "same to only the window in front, and that one is remembered " +
+            "per app.",
+      target: ".menubar",
+      before: function () { DS.ui.closeMenus(); },
+      key: "Ctrl Alt +",
+      demo: "zoom",
+      demoLabel: "Show me"
+    },
+    {
+      title: "And in your language",
+      body: "The globe switches between seven, Arabic included. Coverage is " +
+            "partial and honest about it: the Language pane lists every " +
+            "phrase it could not translate, and you can type them in " +
+            "yourself.",
+      target: "#mb-lang"
+    },
+    {
+      title: "The beetle",
+      body: "It sits in the corner counting anything the system throws. " +
+            "Click it and the report already knows your theme, your optics, " +
+            "the window in front and the error itself. Right-click it to " +
+            "move it, hide it — or break it.",
+      target: "#bugdot",
+      before: function () {
+        DS.store.set("bugs.show", true);
+        DS.bugs.paintDot();
+        DS.wm.list().forEach(function (w) { DS.wm.minimize(w); });
+      }
+    },
+    {
       title: "Right-click almost anything",
       body: "The desktop, the dock, a file, a photo, a widget, a note, a " +
             "saved look. The menus are glass too.",
@@ -264,7 +326,8 @@
         if (!el) return null;
         var r = el.getBoundingClientRect();
         if (!r.width || !r.height) return null;
-        return r;
+        // the spotlight lives inside the desktop, which may be zoomed
+        return DS.zoom ? DS.zoom.rect(el) : r;
       }
 
       function place(step) {
@@ -286,10 +349,12 @@
 
         // put the card wherever there is room
         var cw = 340, ch = card.offsetHeight || 200;
+        var vw = DS.zoom ? DS.zoom.vw() : window.innerWidth;
+        var vh = DS.zoom ? DS.zoom.vh() : window.innerHeight;
         var below = r.bottom + 16;
-        var top = below + ch < window.innerHeight - 12 ? below : r.top - ch - 16;
-        if (top < 12) top = Math.min(window.innerHeight - ch - 12, r.bottom + 16);
-        var left = DS.clamp(r.left + r.width / 2 - cw / 2, 14, window.innerWidth - cw - 14);
+        var top = below + ch < vh - 12 ? below : r.top - ch - 16;
+        if (top < 12) top = Math.min(vh - ch - 12, r.bottom + 16);
+        var left = DS.clamp(r.left + r.width / 2 - cw / 2, 14, vw - cw - 14);
         card.style.left = left + "px";
         card.style.top = Math.max(12, top) + "px";
       }

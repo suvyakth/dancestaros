@@ -35,7 +35,32 @@
   var wm = {};
 
   function layer() { return DS.qs("#windows"); }
-  function bounds() { return layer().getBoundingClientRect(); }
+
+  /* The desktop can be zoomed, and when it is, a rect measured in
+     viewport pixels no longer matches a `style.left` written into it.
+     Every measurement in this file is therefore taken in the desktop's
+     own coordinates, and every pointer delta is converted into them.
+     At 100% both conversions are the identity. */
+  function bounds() {
+    return DS.zoom ? DS.zoom.rect(layer()) : layer().getBoundingClientRect();
+  }
+  function zk() { return DS.zoom ? DS.zoom.k() : 1; }
+
+  /* On a phone a window does not float: it fills the frame between the
+     menu bar and the dock, and the next one opens on top of it. The
+     dock becomes the switcher. This is not a smaller desktop, and
+     pretending otherwise gives you a 300px pane you cannot aim at. */
+  function tiling() { return !!(DS.form && DS.form.tiled()); }
+
+  function fill(win) {
+    var b = bounds();
+    win.classList.remove("maximized");
+    win.classList.add("tiled");
+    win.style.left = "0px";
+    win.style.top = "0px";
+    win.style.width = b.width + "px";
+    win.style.height = b.height + "px";
+  }
 
   function setGeom(win, x, y, w, hh) {
     var b = bounds();
@@ -103,9 +128,16 @@
       return null;
     }
 
-    // Single-instance apps just come forward.
+    // Single-instance apps just come forward — but a window that is
+    // already playing its closing animation is not a window you can
+    // come forward to. It stays in `wins` for another 200ms, and
+    // handing it back focuses a pane that then deletes itself and
+    // takes the focus with it. Reopening an app inside that window
+    // must give you a new one.
     if (app.single !== false) {
-      var existing = wins.filter(function (w) { return w._app.id === appId; })[0];
+      var existing = wins.filter(function (w) {
+        return w._app.id === appId && !w.classList.contains("closing");
+      })[0];
       if (existing) {
         if (existing._minimized) wm.unminimize(existing);
         wm.focus(existing);
@@ -144,14 +176,18 @@
     win._titleEl = titleEl.lastChild;
     win._tools = tools;
 
-    // cascade so a fresh window never lands exactly on the last one
-    var ox = (cascade % 6) * 28;
-    var oy = (cascade % 6) * 24;
-    cascade += 1;
-    win.style.width = w + "px";
-    win.style.height = hh + "px";
-    win.style.left = Math.max(12, (b.width - w) / 2 + ox - 70) + "px";
-    win.style.top = Math.max(10, (b.height - hh) / 2 + oy - 60) + "px";
+    if (tiling()) {
+      fill(win);
+    } else {
+      // cascade so a fresh window never lands exactly on the last one
+      var ox = (cascade % 6) * 28;
+      var oy = (cascade % 6) * 24;
+      cascade += 1;
+      win.style.width = w + "px";
+      win.style.height = hh + "px";
+      win.style.left = Math.max(12, (b.width - w) / 2 + ox - 70) + "px";
+      win.style.top = Math.max(10, (b.height - hh) / 2 + oy - 60) + "px";
+    }
 
     layer().appendChild(win);
     wins.push(win);
@@ -197,6 +233,9 @@
         h("div", { text: String(err && err.message || err), style: { "font-size": "11px" } })
       ]));
     }
+
+    // window zoom is remembered per app, so it comes back with the app
+    if (DS.zoom) DS.zoom.paintWin(win);
 
     var recent = DS.store.get("lastOpened", []).filter(function (x) { return x !== appId; });
     recent.unshift(appId);
@@ -274,7 +313,33 @@
     document.body.classList.toggle("has-max", any);
   };
 
+  /** Re-lay every window after the form factor changes under us. */
+  wm.refit = function () {
+    var b = bounds();
+    var tile = tiling();
+    wins.forEach(function (win) {
+      if (tile) {
+        fill(win);
+      } else if (win.classList.contains("tiled")) {
+        /* Coming back to a big screen: give it the size the app asked
+           for in the first place, centred, rather than leaving it
+           stretched across a desktop it never chose to fill. */
+        win.classList.remove("tiled");
+        var w = Math.min(win._app.w || 720, Math.max(320, b.width - 60));
+        var hh = Math.min(win._app.h || 480, Math.max(220, b.height - 80));
+        setGeom(win, (b.width - w) / 2, Math.max(10, (b.height - hh) / 2), w, hh);
+      }
+      if (win._app.onResize) {
+        try { win._app.onResize(win._api); } catch (e) { console.error(e); }
+      }
+    });
+    wm.syncMax();
+    wm.restack();
+  };
+
   wm.toggleMax = function (win) {
+    // a tiled window is already the whole frame; there is nowhere to go
+    if (win.classList.contains("tiled")) return;
     var b = bounds();
     if (win.classList.contains("maximized")) {
       var p = win._prev || { x: 60, y: 40, w: 720, h: 480 };
@@ -319,6 +384,7 @@
   function initDrag(win, bar) {
     bar.addEventListener("pointerdown", function (e) {
       if (e.button !== 0) return;
+      if (win.classList.contains("tiled")) return;   // nothing to drag it to
       if (e.target.closest(".lt") || e.target.closest(".win-tools")) return;
 
       var b = bounds();
@@ -335,8 +401,9 @@
       DS.glass.lite(true);
 
       function move(ev) {
-        var dx = ev.clientX - startX;
-        var dy = ev.clientY - startY;
+        var k = zk();
+        var dx = (ev.clientX - startX) / k;
+        var dy = (ev.clientY - startY) / k;
         if (!moved && Math.abs(dx) + Math.abs(dy) < 3) return;
 
         // Dragging a maximized window restores it under the cursor.
@@ -346,7 +413,7 @@
           ww = p.w;
           win.style.width = p.w + "px";
           win.style.height = p.h + "px";
-          ox = ev.clientX - b.left - p.w / 2;
+          ox = ev.clientX / k - b.left - p.w / 2;
           oy = 0;
           startX = ev.clientX;
           startY = ev.clientY;
@@ -356,8 +423,8 @@
 
         setGeom(win, ox + dx, oy + dy, null, null);
 
-        var px = ev.clientX - b.left;
-        var py = ev.clientY - b.top;
+        var px = ev.clientX / k - b.left;
+        var py = ev.clientY / k - b.top;
         var r = snapRegion(px, py, b);
         if (r !== region) {
           region = r;
@@ -418,6 +485,7 @@
     DS.qsa(".rz", win).forEach(function (grip) {
       grip.addEventListener("pointerdown", function (e) {
         if (e.button !== 0) return;
+        if (win.classList.contains("tiled")) return;
         e.stopPropagation();
         var dir = grip.dataset.dir;
         var sx = e.clientX, sy = e.clientY;
@@ -428,7 +496,8 @@
         DS.glass.lite(true);
 
         function move(ev) {
-          var dx = ev.clientX - sx, dy = ev.clientY - sy;
+          var k = zk();
+          var dx = (ev.clientX - sx) / k, dy = (ev.clientY - sy) / k;
           var x = ox, y = oy, w = ow, hh = oh;
           if (dir.indexOf("e") >= 0) w = ow + dx;
           if (dir.indexOf("s") >= 0) hh = oh + dy;
@@ -481,9 +550,14 @@
   window.addEventListener("resize", function () {
     var b = bounds();
     wins.forEach(function (w) {
-      if (w.classList.contains("maximized")) {
+      if (w.classList.contains("maximized") || w.classList.contains("tiled")) {
+        w.style.left = "0px";
+        w.style.top = "0px";
         w.style.width = b.width + "px";
         w.style.height = b.height + "px";
+        if (w._app.onResize) {
+          try { w._app.onResize(w._api); } catch (e) { console.error(e); }
+        }
         return;
       }
       var x = parseFloat(w.style.left), y = parseFloat(w.style.top);

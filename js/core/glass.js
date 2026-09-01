@@ -116,8 +116,12 @@
       DS.qsa(LIT_SEL).forEach(function (p) {
         var r = p.getBoundingClientRect();
         if (!r.width) return;
-        p.style.setProperty("--lit-x", Math.round(L.x - r.left) + "px");
-        p.style.setProperty("--lit-y", Math.round(L.y - r.top) + "px");
+        /* The offset is measured in viewport pixels but written as a
+           length inside the pane, which the desktop's zoom will scale
+           again — so divide it back out first. */
+        var k = DS.zoom ? DS.zoom.of(p) : 1;
+        p.style.setProperty("--lit-x", Math.round((L.x - r.left) / k) + "px");
+        p.style.setProperty("--lit-y", Math.round((L.y - r.top) / k) + "px");
       });
     });
   };
@@ -207,7 +211,11 @@
     if (wrap) {
       wrap.dataset.pos = d.position || "bottom";
       wrap.dataset.hidemax = d.hideOnMax === false ? "0" : "1";
-      wrap.classList.toggle("autohide", !!d.autohide);
+      /* Auto-hide is asked for with a pointer in mind. On a touch
+         screen there is no "approaching the edge", so obeying it would
+         hide the dock permanently — DS.form makes that call. */
+      wrap.classList.toggle("autohide",
+        DS.form ? DS.form.dockAutohide() : !!d.autohide);
     }
     if (dock) {
       dock.dataset.pos = d.position || "bottom";
@@ -297,9 +305,17 @@
     var o = opts || {};
     if (DS.store.get("motion") === "off") return;
 
-    var W = window.innerWidth, H = window.innerHeight;
-    var cx = x === undefined ? W / 2 : x;
-    var cy = y === undefined ? H / 2 : y;
+    /* #desktop is hidden while the greeting screen is up, so a crack
+       appended there would never be seen — and the greeting screen is
+       not zoomed, while the desktop may be. Pick the host first, then
+       work in that host's own coordinates. */
+    var desk = DS.qs("#desktop");
+    var host = (desk && !desk.hidden) ? desk : document.body;
+    var k = (DS.zoom && host === desk) ? DS.zoom.k() : 1;
+
+    var W = window.innerWidth / k, H = window.innerHeight / k;
+    var cx = x === undefined ? W / 2 : x / k;
+    var cy = y === undefined ? H / 2 : y / k;
     var arms = o.arms || (7 + Math.floor(Math.random() * 5));
     var reach = o.reach || Math.max(W, H) * (o.big ? 0.75 : 0.42);
 
@@ -352,11 +368,6 @@
     hit.setAttribute("class", "hit");
     svg.appendChild(hit);
 
-    // #desktop is hidden while the greeting screen is up, so a crack
-    // appended there would never be seen. Use whatever is actually
-    // on screen.
-    var desk = DS.qs("#desktop");
-    var host = (desk && !desk.hidden) ? desk : document.body;
     host.appendChild(svg);
     setTimeout(function () {
       if (svg.parentNode) svg.parentNode.removeChild(svg);
@@ -376,13 +387,21 @@
     if (!host) return;
     var n = DS.clamp(Math.round((rect.width * rect.height) / 22000), 8, 26);
 
+    /* The rect was measured in viewport pixels; the shards are laid out
+       inside the desktop, which the zoom will scale. */
+    var k = DS.zoom ? DS.zoom.k() : 1;
+    var R = {
+      left: rect.left / k, top: rect.top / k,
+      width: rect.width / k, height: rect.height / k
+    };
+
     for (var i = 0; i < n; i++) {
       var sh = document.createElement("i");
       sh.className = "shard";
       var sx = Math.random(), sy = Math.random();
       var w = 18 + Math.random() * 46;
-      sh.style.left = (rect.left + sx * (rect.width - w)) + "px";
-      sh.style.top = (rect.top + sy * (rect.height - w)) + "px";
+      sh.style.left = (R.left + sx * (R.width - w)) + "px";
+      sh.style.top = (R.top + sy * (R.height - w)) + "px";
       sh.style.width = w + "px";
       sh.style.height = w + "px";
       // fling outward from the centre of the pane
@@ -419,8 +438,9 @@
       lastLit = pane;
       if (!pane) return;
       var r = pane.getBoundingClientRect();
-      pane.style.setProperty("--mx", (e.clientX - r.left).toFixed(1) + "px");
-      pane.style.setProperty("--my", (e.clientY - r.top).toFixed(1) + "px");
+      var k = DS.zoom ? DS.zoom.of(pane) : 1;
+      pane.style.setProperty("--mx", ((e.clientX - r.left) / k).toFixed(1) + "px");
+      pane.style.setProperty("--my", ((e.clientY - r.top) / k).toFixed(1) + "px");
     });
   }
 

@@ -136,7 +136,21 @@ window.DS = window.DS || {};
     bell:     '<path d="M6.5 10a5.5 5.5 0 0 1 11 0c0 4 1.5 5.5 1.5 5.5H5S6.5 14 6.5 10z"/><path d="M10 18.5a2.2 2.2 0 0 0 4 0"/>',
     stack:    '<rect x="3.5" y="4" width="17" height="5" rx="1.6"/><rect x="3.5" y="11" width="17" height="5" rx="1.6"/><path d="M6 18.6h12"/>',
     minimize: '<path d="M6 12h12"/>',
-    maximize: '<rect x="5.5" y="5.5" width="13" height="13" rx="2"/>'
+    maximize: '<rect x="5.5" y="5.5" width="13" height="13" rx="2"/>',
+    globe:    '<circle cx="12" cy="12" r="8.6"/><path d="M3.4 12h17.2"/><path d="M12 3.4c2.4 2.4 3.6 5.3 3.6 8.6S14.4 18.2 12 20.6c-2.4-2.4-3.6-5.3-3.6-8.6S9.6 5.8 12 3.4z"/>',
+    zoomIn:   '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4L21 21"/><path d="M10.5 7.9v5.2M7.9 10.5h5.2"/>',
+    zoomOut:  '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4L21 21"/><path d="M7.9 10.5h5.2"/>',
+    /* a pad: two shoulders, a cross and two beads */
+    gamepad:  '<path d="M8.4 7.5h7.2a5.4 5.4 0 0 1 5.3 4.4l.8 4.3a2.7 2.7 0 0 1-4.9 2l-1.7-2.3H8.9l-1.7 2.3a2.7 2.7 0 0 1-4.9-2l.8-4.3a5.4 5.4 0 0 1 5.3-4.4z"/>' +
+              '<path d="M7.6 11.4v2.7M6.25 12.75h2.7"/>' +
+              '<path d="M15.6 12h.01M17.8 13.8h.01"/>',
+    /* six legs, two antennae, one seam down the elytra */
+    bug:      '<path d="M12 8c2.9 0 5 2.3 5 5.2v1.3a5 5 0 0 1-10 0v-1.3C7 10.3 9.1 8 12 8z"/>' +
+              '<path d="M9.5 6.7a2.7 2.7 0 0 1 5 0"/>' +
+              '<path d="M9.8 3.6 11 5.4M14.2 3.6 13 5.4"/>' +
+              '<path d="M7.1 11.7 4.2 10.5M7 14.6H4M7.6 17.5 5.2 19.5' +
+              'M16.9 11.7l2.9-1.2M17 14.6h3M16.4 17.5l2.4 2"/>' +
+              '<path d="M12 8.7v9.5"/>'
   };
 
   DS.icon = function (name, size, extra) {

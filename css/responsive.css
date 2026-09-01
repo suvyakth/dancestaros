@@ -1,0 +1,329 @@
+/* ═══════════════════════════════════════════════════════════════
+   responsive.css — the same OS on a phone
+
+   Loaded last, so it wins. It keys off the attributes js/core/form.js
+   writes on <html> rather than on media queries alone, because the
+   changes are not all cosmetic: when data-form is "phone", windows
+   genuinely stop floating, and CSS and the window manager have to
+   agree about that. Media queries are still used for the things that
+   really are about the medium — hover, coarse pointers, notches.
+
+   Nothing here applies at desktop size. The file is a set of
+   overrides for states that a desktop never enters.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ───────────────────── TOUCH, EVERYWHERE ─────────────────────
+   These are about the input device, not the screen size — a 27"
+   touchscreen needs them just as much as a phone. */
+
+/* Pointer-event drags (title bars, resize grips, widgets, sliders)
+   are stolen by the browser's own pan/zoom unless the element opts
+   out. Without this, a window cannot be dragged by a finger at all. */
+.win-bar, .rz, .widget, .g-range, .dk, .lt, .di, .bugdot, .tour-spot {
+  touch-action: none;
+}
+/* Everything else: allow scrolling, but not double-tap-to-zoom, which
+   otherwise fires on every second tap of a button. */
+body { touch-action: manipulation; }
+.win-body, .app-main, .app-side, .lab-panel, .lch-results, .tm-out {
+  touch-action: pan-x pan-y;
+}
+
+/* A long press is how touch reaches a context menu (see form.js). iOS
+   answers the same gesture with a selection callout, which would eat
+   it, so the callout is turned off on the surfaces that have menus. */
+* { -webkit-touch-callout: none; }
+
+@media (hover: none) {
+  /* Hover states on a touch screen latch on after a tap and stay lit,
+     which reads as a stuck button. The dock's magnification and its
+     tooltips are hover affordances with no touch equivalent, so they
+     go rather than misfire. */
+  .dk:hover,
+  .dk:hover + .dk,
+  .dk:has(+ .dk:hover),
+  .dock[data-pos="left"] .dk:hover,
+  .dock[data-pos="right"] .dk:hover,
+  .dock-wrap.peek .dk:hover { transform: none; }
+  .dk:active { transform: translateY(-4px) scale(1.06); }
+  .dk-tip { display: none; }
+  .lt:hover { transform: none; }
+  .lt:active { transform: scale(.86); }
+  .bugdot:hover { transform: none; }
+  .di:hover { background: none; }
+}
+
+/* Coarse pointers need targets they can actually hit. 12px traffic
+   lights are a mouse measurement. */
+@media (pointer: coarse) {
+  .lt { width: 15px; height: 15px; }
+  .lt::after { top: 2.6px; left: 3.2px; width: 5px; height: 3.5px; }
+  .win-bar { height: 44px; }
+  .mi { height: 38px; font-size: 13.5px; }
+  .side-item { padding: 10px 10px; }
+  .g-switch { transform: scale(1.1); transform-origin: right center; }
+  .lch-row { padding-top: 10px; padding-bottom: 10px; }
+}
+
+/* ───────────────────── NOTCHES AND HOME BARS ─────────────────────
+   index.html asks for viewport-fit=cover, which puts the layout under
+   the status bar and the home indicator. These give it back. */
+@supports (padding: env(safe-area-inset-top)) {
+  [data-form="phone"] {
+    --menubar-h: calc(32px + env(safe-area-inset-top));
+  }
+  [data-form="phone"] .menubar { padding-top: env(safe-area-inset-top); }
+  [data-form="phone"] .dock-wrap[data-pos="bottom"] {
+    bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+  [data-form="phone"] .bugdot[data-corner="br"],
+  [data-form="phone"] .bugdot[data-corner="bl"] {
+    bottom: calc(var(--dock-h) + 16px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ───────────────────── PHONE: THE MENU BAR ───────────────────── */
+#mb-more { display: none; }
+
+[data-form="phone"] .menubar { gap: 0; padding: 0 4px; }
+[data-form="phone"] [data-menu="app"],
+[data-form="phone"] [data-menu="view"],
+[data-form="phone"] [data-menu="help"] { display: none; }
+[data-form="phone"] #mb-more { display: flex; }
+[data-form="phone"] .mb-item { padding: 0 6px; height: 26px; }
+/* the language tag and the clock's weekday are the first things to go */
+[data-form="phone"] #mb-lang .mb-tag { display: none; }
+[data-form="phone"] .mb-clock { gap: 0; font-size: 11.5px; }
+[data-form="phone"] #clock-day { display: none; }
+
+/* A folded menu holds three menus' worth of rows, so it scrolls. */
+[data-form="phone"] .menu-pop,
+[data-form="phone"] .ctx {
+  max-width: calc(100vw - 16px);
+  max-height: 68vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ───────────────────── PHONE: WINDOWS ─────────────────────
+   A tiled window is the frame. No corners to round against the
+   desktop, no shadow to lift it off a surface it now covers, no grips,
+   and no maximise button — it is already maximised. */
+.win.tiled {
+  border-radius: 0;
+  box-shadow: var(--g-inset);
+  animation: winRise 260ms var(--ease);
+}
+@keyframes winRise { from { opacity: 0; transform: translateY(18px); } }
+.win.tiled .rz { display: none; }
+.win.tiled .g-edge { display: none; }
+.win.tiled .lt-max { display: none; }
+.win.tiled .win-bar { cursor: default; }
+
+/* Unfocused windows normally recede so a stack stays legible. Tiled
+   windows are not a stack — the one in front is the only one you can
+   see — so the receding would just make the visible window dimmer. */
+.win.tiled:not(.focused) { --g-alpha: .085; --g-sheen: .3; }
+
+[data-form="phone"] .win { min-width: 0; min-height: 0; }
+[data-form="phone"] .win-title { font-size: 13px; }
+[data-form="phone"] .win-body.pad { padding: 14px; }
+
+/* ───────────────────── PHONE: SIDEBARS BECOME TABS ─────────────────────
+   Settings, Clock, the Bug Reporter and the labs all put a 186px
+   column beside their content. On a 390px screen that is half the
+   window, so the column turns on its side and becomes a scrolling
+   strip of tabs above the content. */
+[data-form="phone"] .win-body.flush { flex-direction: column; }
+
+[data-form="phone"] .app-side,
+[data-form="phone"] .lab-panel {
+  width: auto;
+  max-height: none;
+  flex: none;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  padding: 7px 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  box-shadow: inset 0 -1px 0 rgb(var(--edge-hi) / .12);
+}
+[data-form="phone"] .app-side::-webkit-scrollbar,
+[data-form="phone"] .lab-panel::-webkit-scrollbar { display: none; }
+[data-form="phone"] .side-label { display: none; }
+[data-form="phone"] .side-item {
+  flex: none;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+[data-form="phone"] .side-item span { overflow: visible; }
+
+/* The labs put controls in that panel rather than tabs, so a strip
+   would crush them. They get a bottom sheet instead. */
+[data-form="phone"] .lab-panel {
+  order: 2;
+  flex-direction: column;
+  max-height: 46%;
+  overflow-y: auto;
+  padding: 10px 14px 16px;
+  box-shadow: inset 0 1px 0 rgb(var(--edge-hi) / .12);
+}
+[data-form="phone"] .lab-stage { order: 1; padding: 10px; }
+
+[data-form="phone"] .st-main,
+[data-form="phone"] .bug-main { padding: 16px 15px 26px; }
+
+/* Finder's list row spends 210px of fixed columns on the size and the
+   modified date — more, on a phone, than it leaves for the name of the
+   file. The name is the column you came for. */
+[data-form="phone"] .fx-list .fx-item { grid-template-columns: 22px 1fr; }
+[data-form="phone"] .fx-list .fx-li-meta { display: none; }
+
+/* ───────────────────── PHONE: THE DOCK ─────────────────────
+   It stops being a shelf of icons that magnify and becomes the app
+   switcher: full width, scrolling sideways, always visible. */
+[data-form="phone"] .dock-wrap { bottom: 10px; }
+[data-form="phone"] .dock-wrap[data-pos="left"],
+[data-form="phone"] .dock-wrap[data-pos="right"] {
+  /* a side dock has nowhere to go on a phone */
+  top: auto; bottom: 10px; left: 0; right: 0;
+  flex-direction: row;
+  justify-content: center;
+}
+[data-form="phone"] .dock,
+[data-form="phone"] .dock[data-pos="left"],
+[data-form="phone"] .dock[data-pos="right"] {
+  flex-direction: row;
+  align-items: center;
+  max-width: calc(100vw - 16px);
+  padding: 7px 9px;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+[data-form="phone"] .dock::-webkit-scrollbar { display: none; }
+[data-form="phone"] .dk { width: 44px; height: 44px; }
+[data-form="phone"] .dk-dot { bottom: 2px; }
+[data-form="phone"] .dock[data-pos="left"] .dk-dot,
+[data-form="phone"] .dock[data-pos="right"] .dk-dot {
+  bottom: 2px; top: auto; left: 50%; right: auto; margin-left: -2px;
+}
+/* The dock is the switcher on a phone, so it never steps aside — not
+   for a maximised window (every window is maximised here) and not for
+   auto-hide, which form.js already refuses on a touch screen. The blur
+   has to be handed back too: the parked rules drop it deliberately. */
+[data-form="phone"] body.has-max .dock-wrap[data-hidemax="1"][data-pos="bottom"],
+[data-form="phone"] body.has-max .dock-wrap[data-hidemax="1"][data-pos="left"],
+[data-form="phone"] body.has-max .dock-wrap[data-hidemax="1"][data-pos="right"],
+[data-form="phone"] .dock-wrap.autohide[data-pos="bottom"],
+[data-form="phone"] .dock-wrap.autohide[data-pos="left"],
+[data-form="phone"] .dock-wrap.autohide[data-pos="right"] {
+  transform: none;
+  opacity: 1;
+}
+[data-form="phone"] body.has-max .dock-wrap[data-hidemax="1"] .dock,
+[data-form="phone"] .dock-wrap.autohide .dock {
+  backdrop-filter: blur(28px) saturate(var(--g-sat)) brightness(var(--g-bright));
+  -webkit-backdrop-filter: blur(28px) saturate(var(--g-sat)) brightness(var(--g-bright));
+}
+
+/* ───────────────────── PHONE: THE DESKTOP ITSELF ───────────────────── */
+[data-form="phone"] .desk-icons { display: none; }
+
+/* Widgets stop being placed and become a column. These override the
+   inline left/top/width that widgets.js writes, because in flow mode
+   that geometry has no meaning — the stored values are left untouched
+   so a return to a big screen restores every position exactly. */
+[data-form="phone"] .widgets.flowed {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  inset: calc(var(--menubar-h) + 9px) 9px calc(var(--dock-h) + 18px) 9px;
+  overflow: hidden;
+}
+[data-form="phone"] .widgets.flowed .widget {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  width: auto !important;
+  flex: none;
+}
+[data-form="phone"] .widgets.flowed .widget.dragging { transform: none; }
+
+/* ───────────────────── PHONE: OVERLAYS ───────────────────── */
+[data-form="phone"] .launcher { padding-top: 7vh; }
+[data-form="phone"] .launcher-inner {
+  width: calc(100vw - 20px);
+  max-height: 80vh;
+}
+[data-form="phone"] .toasts {
+  left: 10px; right: 10px;
+  width: auto;
+  top: calc(var(--menubar-h) + 9px);
+}
+[data-form="phone"] .toast { animation: toastDrop 340ms var(--ease-back); }
+@keyframes toastDrop { from { opacity: 0; transform: translateY(-22px) scale(.96); } }
+[data-form="phone"] .toast.out { animation: toastLift 240ms var(--ease) forwards; }
+@keyframes toastLift { to { opacity: 0; transform: translateY(-18px) scale(.96); } }
+
+/* !important: shell.js and tour.js position these inline from a
+   measured anchor, which on a phone is off the edge of the screen. */
+[data-form="phone"] .cc { width: calc(100vw - 20px); right: 10px !important; }
+[data-form="phone"] .dlg { width: calc(100vw - 28px); padding: 18px; }
+[data-form="phone"] .drop-veil { display: none; }   /* nothing to drag from */
+
+/* The tour card becomes a bottom sheet: a floating card beside a
+   spotlight needs room to the side, and there is none. */
+[data-form="phone"] .tour-card,
+[data-form="phone"] .tour-card.mid {
+  left: 10px !important;
+  right: 10px;
+  top: auto !important;
+  bottom: calc(var(--dock-h) + 16px);
+  width: auto;
+  max-height: 52vh;
+  overflow-y: auto;
+}
+
+/* ───────────────────── PHONE: SETUP AND LOCK ───────────────────── */
+[data-form="phone"] .land, [data-form="phone"] .lock { padding: 12px; }
+[data-form="phone"] .land-card { width: 100%; max-height: 92vh; }
+[data-form="phone"] .land-body { padding: 26px 20px 20px; }
+[data-form="phone"] .land-title { font-size: 24px; }
+[data-form="phone"] .land-foot { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+[data-form="phone"] .land-grid { grid-template-columns: 1fr; }
+[data-form="phone"] .land-avgrid { grid-template-columns: repeat(5, 1fr); }
+
+/* ───────────────────── SHORT AND WIDE ─────────────────────
+   A phone on its side: barely 400px tall, and the menu bar plus the
+   dock plus a title bar would eat half of it. */
+[data-short="on"] .dock-wrap[data-pos="bottom"] { bottom: 6px; }
+[data-short="on"] .dock { padding: 5px 8px; }
+[data-short="on"] .dk { width: 38px; height: 38px; }
+[data-short="on"] .win-bar { height: 36px; }
+[data-short="on"] .widgets, [data-short="on"] .widgets.flowed { display: none; }
+[data-short="on"] .launcher { padding-top: 3vh; }
+[data-short="on"] .launcher-inner { max-height: 88vh; }
+[data-short="on"] .tour-card, [data-short="on"] .tour-card.mid { max-height: 68vh; }
+
+/* ───────────────────── TABLET ─────────────────────
+   Windows still float here — there is room to arrange them — but the
+   furniture around them tightens up. */
+[data-form="tablet"] .app-side { width: 156px; }
+[data-form="tablet"] .lab-panel { width: 210px; }
+[data-form="tablet"] .desk-icons { grid-template-columns: repeat(auto-fill, 78px); }
+[data-form="tablet"] .st-main { padding: 18px 20px; }
+
+/* ───────────────────── OPTICS ─────────────────────
+   Deliberately untouched. The material is the project, the refraction
+   band is already skipped on panes too small to show it, and the
+   existing perf-lite path already halves the blur during drags. Capping
+   the blur here would silently override a value the user set, on no
+   evidence — if a phone turns out to need it, it should be a measured
+   setting rather than a guess in a stylesheet.  */

@@ -280,7 +280,7 @@
   }
 
   function freeSpot(def) {
-    var L = layer().getBoundingClientRect();
+    var L = DS.zoom ? DS.zoom.rect(layer()) : layer().getBoundingClientRect();
     var taken = DS.store.get("widgets", []);
     for (var col = 0; col < 6; col++) {
       for (var rowN = 0; rowN < 6; rowN++) {
@@ -346,7 +346,11 @@
       if (e.button !== 0) return;
       if (e.target.closest("button, input, textarea, a")) return;
 
-      var L = layer().getBoundingClientRect();
+      /* Measured in the desktop's own coordinates, because the desktop
+         may be zoomed and rec.x is written back as a plain px offset
+         inside it. At 100% this is the identity. */
+      var L = DS.zoom ? DS.zoom.rect(layer()) : layer().getBoundingClientRect();
+      var k = DS.zoom ? DS.zoom.k() : 1;
       var sx = e.clientX, sy = e.clientY;
       var ox = rec.x, oy = rec.y;
       var moved = false;
@@ -356,7 +360,10 @@
       DS.glass.lite(true);
 
       function move(ev) {
-        var dx = ev.clientX - sx, dy = ev.clientY - sy;
+        // in flow mode a widget has no position of its own to change,
+        // but the tap-to-open below still has to work
+        if (DS.form && DS.form.flowWidgets()) return;
+        var dx = (ev.clientX - sx) / k, dy = (ev.clientY - sy) / k;
         if (!moved && Math.abs(dx) + Math.abs(dy) < 3) return;
         moved = true;
         rec.x = DS.clamp(ox + dx, 6, Math.max(6, L.width - el.offsetWidth - 6));
@@ -408,6 +415,17 @@
       Object.keys(mounted).forEach(function (id) { widgets.unmount(id); });
       DS.clear(host);
       DS.store.get("widgets", []).forEach(mountOne);
+      widgets.reflow();
+    },
+
+    /* On a phone there is no room to arrange anything, so the widgets
+       stop being placed and become a column under the menu bar. The
+       stored x/y is left alone — going back to a big screen puts every
+       widget back exactly where it was. */
+    reflow: function () {
+      var host = layer();
+      if (!host) return;
+      host.classList.toggle("flowed", !!(DS.form && DS.form.flowWidgets()));
     },
 
     unmount: function (id) {

@@ -1,0 +1,139 @@
+/* ═══════════════════════════════════════════════════════════════
+   zoom.css — system zoom, window zoom, and the readout
+
+   The whole of system zoom is the one declaration below. `zoom`
+   affects layout, so the desktop's own box shrinks by exactly the
+   factor it is painted up by and still measures one viewport — no
+   overflow, no scrollbars, and no transform on an ancestor to break
+   every backdrop-filter underneath it.
+
+   The wallpaper deliberately stays outside it. It is five drifting
+   orbs with no detail to resolve, so scaling it would cost GPU time
+   to change nothing.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* The size is written out rather than left to `inset: 0` so the box is
+   the same whichever way a browser resolves a zoomed containing block:
+   viewport units are unaffected by zoom, so a box of 100vw/k painted at
+   k is exactly one viewport, exactly once. */
+.desktop {
+  width: calc(100vw / var(--ui-zoom, 1));
+  height: calc(100vh / var(--ui-zoom, 1));
+  zoom: var(--ui-zoom, 1);
+}
+
+/* On a phone 100vh is the *largest* the viewport ever gets — it counts
+   the space under the browser's own chrome, so the dock would sit below
+   the fold until you scrolled something that does not scroll. The
+   dynamic units track what is actually visible. */
+@supports (height: 100dvh) {
+  .desktop {
+    width: calc(100dvw / var(--ui-zoom, 1));
+    height: calc(100dvh / var(--ui-zoom, 1));
+  }
+}
+
+/* Window zoom is set inline on .win-body by zoom.js, per app. The class
+   is only here so a zoomed window can say so. */
+.win.win-zoomed > .win-bar .win-title::after {
+  content: "";
+  width: 5px; height: 5px;
+  margin-left: 2px;
+  border-radius: var(--r-round);
+  background: hsl(var(--accent) / .85);
+  box-shadow: 0 0 7px hsl(var(--accent) / .8);
+}
+
+/* ── the menu-bar readout ────────────────────────────────────────
+   A pill rather than an icon, because the number is the point. It is
+   hidden entirely at 100%, so its presence means "you are zoomed". */
+.mb-pill {
+  gap: 5px;
+  padding: 0 8px;
+  color: var(--text-2);
+}
+.mb-pill .mb-tag {
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.mb-pill:hover { color: var(--text); }
+
+#mb-zoom {
+  background: hsl(var(--accent) / .16);
+  box-shadow: inset 0 0 0 .5px hsl(var(--accent) / .34);
+}
+#mb-zoom:hover { background: hsl(var(--accent) / .26); }
+#mb-zoom .mb-tag { color: hsl(var(--accent) / .96); }
+
+/* ── the zoom pane's own bits ───────────────────────────────── */
+.zm-stops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.zm-stop {
+  min-width: 56px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  border: 0;
+  border-radius: var(--g-radius-xs);
+  background: rgb(var(--g-tint) / .10);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .16);
+  cursor: pointer;
+  transition: background 140ms linear, color 140ms linear;
+}
+.zm-stop:hover { background: rgb(var(--g-tint) / .18); color: var(--text); }
+.zm-stop.on {
+  color: var(--text);
+  background: hsl(var(--accent) / .24);
+  box-shadow: inset 0 0 0 .5px hsl(var(--accent) / .5);
+}
+
+/* A ruled strip that grows with the factor, so the number has
+   something to mean before you commit to it. */
+.zm-gauge {
+  position: relative;
+  height: 62px;
+  margin: 14px 0 4px;
+  border-radius: var(--g-radius-sm);
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgb(var(--edge-hi) / .07) 0 1px, transparent 1px 100%) 0 0 / 12px 100%,
+    rgb(var(--g-tint) / .07);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .14);
+  display: grid;
+  place-items: center;
+}
+.zm-gauge span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-shadow: 0 1px 4px rgb(0 0 0 / .5);
+  transform: scale(var(--zm-preview, 1));
+  transform-origin: center;
+  transition: transform 180ms var(--ease);
+}
+
+.zm-app-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: .5px solid rgb(var(--edge-hi) / .08);
+}
+.zm-app-row b { font-size: 12.5px; font-weight: 500; flex: 1; }
+.zm-app-row i {
+  font-style: normal;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--accent) / .95);
+  min-width: 44px;
+  text-align: right;
+}

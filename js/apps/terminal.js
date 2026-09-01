@@ -84,7 +84,10 @@
       var timers = [];
       var tut = -1;                       // tutorial step, -1 = inactive
 
-      var out = h("div.tm-out");
+      /* data-noi18n: shell output is data, not interface copy. A
+         translator swapping "Desktop" for "Escritorio" inside an `ls`
+         listing would break the very path it just printed. */
+      var out = h("div.tm-out", { "data-noi18n": true });
       var promptEl = h("span.tm-prompt");
       var input = h("input.tm-input", { spellcheck: "false", autocomplete: "off" });
       var row = h("div.tm-row", {}, [promptEl, input]);
@@ -529,6 +532,87 @@
         DS.store.set("theme", t);
         DS.glass.applyTheme();
         write("theme set to " + t, "ok");
+      });
+
+      cmd("zoom", "system", "zoom [pct|in|out|reset|win <pct>]",
+          "scale the desktop, or the window in front", function (a) {
+        if (!DS.zoom.supported) {
+          return write("zoom: this browser has no CSS zoom, so the desktop " +
+                       "cannot be scaled", "err");
+        }
+        if (!a[0]) {
+          write("desktop  " + DS.zoom.pct() + "%", "ok");
+          var apps = DS.store.get("zoom.apps", {});
+          var ids = Object.keys(apps);
+          if (!ids.length) return write("  no window is zoomed", "dim");
+          ids.forEach(function (id) { write("  " + pad(id, 12) + apps[id] + "%"); });
+          return;
+        }
+        if (a[0] === "in") return write("desktop " + DS.zoom.step(1) + "%", "ok");
+        if (a[0] === "out") return write("desktop " + DS.zoom.step(-1) + "%", "ok");
+        if (a[0] === "reset") { DS.zoom.resetAll(); return write("everything at 100%", "ok"); }
+        if (a[0] === "win") {
+          var w = DS.wm.focused();
+          if (!w) return write("zoom: no window in front", "err");
+          var wv = a[1] === undefined ? 100 : parseFloat(a[1]);
+          if (isNaN(wv)) return write("zoom: not a number: " + a[1], "err");
+          return write(w._app.name + " at " + DS.zoom.setWin(w, wv, true) + "%", "ok");
+        }
+        var v = parseFloat(a[0]);
+        if (isNaN(v)) return write("zoom: try a percentage, in, out, reset or win", "err");
+        write("desktop " + DS.zoom.set(v, true) + "%", "ok");
+      });
+
+      cmd("lang", "system", "lang [code]", "read or set the interface language",
+          function (a) {
+        if (!a[0]) {
+          var cur = DS.i18n.id();
+          write("language " + cur + "  (" + DS.i18n.locale() + ")", "ok");
+          DS.LANGS.forEach(function (l) {
+            write("  " + (l.id === cur ? "*" : " ") + " " + pad(l.id, 4) +
+                  pad(l.native, 12) + l.name + (l.rtl ? "  rtl" : ""));
+          });
+          var gaps = DS.i18n.missing().length;
+          if (cur !== "en") {
+            write("");
+            write(gaps + " phrase" + (gaps === 1 ? "" : "s") +
+                  " seen with no entry in the book", "dim");
+          }
+          return;
+        }
+        var hit = DS.LANGS.filter(function (l) { return l.id === a[0]; })[0];
+        if (!hit) {
+          return write("lang: unknown code. try: " +
+            DS.LANGS.map(function (l) { return l.id; }).join(", "), "err");
+        }
+        DS.i18n.set(hit.id);
+        write("language set to " + hit.native, "ok");
+      });
+
+      cmd("bug", "system", "bug [report|list|diag|throw]",
+          "the beetle in the corner", function (a) {
+        var what = a[0] || "report";
+        if (what === "report") { DS.bugs.open(); return write("reporter open", "ok"); }
+        if (what === "list") {
+          var list = DS.bugs.list();
+          if (!list.length) return write("no reports filed", "dim");
+          list.forEach(function (r) {
+            write("  " + pad(r.severity, 10) + pad(DS.when(r.when), 16) + r.title);
+          });
+          return;
+        }
+        if (what === "diag") {
+          var d = DS.bugs.diagnostics();
+          Object.keys(d).forEach(function (k) {
+            write("  " + pad(k, 12) + String(d[k]));
+          });
+          return;
+        }
+        if (what === "throw") {
+          setTimeout(function () { throw new Error("Thrown from the shell"); }, 0);
+          return write("thrown — watch the beetle", "ok");
+        }
+        write("bug: try report, list, diag or throw", "err");
       });
 
       cmd("accent", "glass", "accent <hue|off>", "set the accent hue, 0-359", function (a) {

@@ -98,6 +98,26 @@
       label: "Demonstrate", run: function () { DS.demo.snap(); }
     },
     {
+      title: "The desktop can be any size",
+      body: "Ctrl+Alt with plus or minus scales the whole shell; Ctrl+Shift " +
+            "scales just the window in front.",
+      label: "Open Zoom",
+      run: function () { DS.wm.open("settings", { pane: "zoom" }); }
+    },
+    {
+      title: "It speaks seven languages",
+      body: "Including one that runs right to left — and you can fill in " +
+            "any phrase the book has missed.",
+      label: "Choose a language",
+      run: function () { DS.wm.open("settings", { pane: "language" }); }
+    },
+    {
+      title: "There is a beetle in the corner",
+      body: "It counts anything the system throws, and knows the state of " +
+            "the machine before you have to describe it.",
+      label: "Meet it", run: function () { DS.bugs.open(); }
+    },
+    {
       title: "New here?",
       body: "The guided tour points at each part of the system in turn.",
       label: "Take the tour", run: function () { DS.tour.start(); }
@@ -173,6 +193,18 @@
         text: "Four short steps and it will be yours. You can change all of " +
               "it later in Settings."
       }));
+
+      /* Language belongs before anything else, because everything after
+         this is read. Coverage is partial and the pane says so, but the
+         chrome and these buttons follow immediately. */
+      body.appendChild(h("div.land-langs", {}, DS.LANGS.map(function (l) {
+        return h("button" + (l.id === DS.i18n.id() ? ".on" : ""), {
+          text: l.native,
+          title: l.name,
+          onclick: function () { DS.i18n.set(l.id); go(step); }
+        });
+      })));
+
       nextBtn.textContent = "Begin";
     }
 

@@ -58,6 +58,15 @@
     DS.store.load();
     DS.fs.init();
 
+    // Bank anything already earned without firing a notification for
+    // each — a save from before this existed would otherwise arrive
+    // as a wall of toasts.
+    DS.awards.settle();
+
+    // Language first, so the greeting screen is already in it rather
+    // than flashing English and correcting itself.
+    DS.i18n.init();
+
     // Apply optics before anything is revealed, so the first frame the
     // user sees is already correct.
     DS.glass.applyTheme();
@@ -65,6 +74,11 @@
     DS.glass.applyWallpaper();
     DS.glass.applyMotion();
     DS.glass.initSheen();
+    DS.zoom.apply();
+
+    // Classify the machine before anything is shown, so a phone never
+    // gets one frame of floating desktop windows before it is corrected.
+    DS.form.apply(true);
 
     var firstRun = !DS.store.get("setupDone", false);
 

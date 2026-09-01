@@ -1,0 +1,225 @@
+/* ═══════════════════════════════════════════════════════════════
+   bugs.css — the beetle, and the reporter
+
+   The beetle is a glass bead like everything else in the system: it
+   takes the same backdrop, the same rim, the same dispersion at its
+   edges. What it adds is a slow idle — it breathes, and when it has
+   caught an error it stops breathing and starts twitching, which is
+   how it asks to be clicked without a badge shouting.
+   ═══════════════════════════════════════════════════════════════ */
+
+.bugdot {
+  position: absolute;
+  z-index: 640;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-round);
+  color: var(--text);
+  cursor: pointer;
+
+  /* the same recipe as any small pane, at bead scale */
+  --g-alpha: .13;
+  background: linear-gradient(150deg,
+    rgb(var(--g-tint) / calc(var(--tint-a) * 2.4)),
+    rgb(var(--g-tint) / calc(var(--tint-a) * .4)) 52%,
+    rgb(var(--g-tint) / calc(var(--tint-a) * 1.9)));
+  backdrop-filter: blur(calc(var(--g-blur) * .8)) saturate(var(--g-sat))
+                   brightness(var(--g-bright));
+  -webkit-backdrop-filter: blur(calc(var(--g-blur) * .8)) saturate(var(--g-sat))
+                           brightness(var(--g-bright));
+  box-shadow:
+    inset 0 2px 11px -5px rgb(var(--refract-cool) / calc(var(--g-disperse) * .95)),
+    inset 0 -2px 11px -5px rgb(var(--refract-warm) / calc(var(--g-disperse) * .8)),
+    inset 0 0 0 var(--g-thick) rgb(var(--edge-hi) / .3),
+    var(--shadow-lift);
+
+  /* It floats above every window (z-index 640), which is the point —
+     you can always reach it — but at full strength it reads as a bright
+     blob sitting on top of whatever you are doing. So it rests quiet
+     and comes up to meet the pointer. */
+  opacity: .5;
+  transition: transform 260ms var(--ease-back), box-shadow 200ms linear,
+              opacity 200ms linear;
+  animation: bugBreathe 5.2s ease-in-out infinite;
+}
+.bugdot:hover, .bugdot.alert { opacity: 1; }
+
+/* corners. The dock is the thing most likely to be in the way, so the
+   bottom corners sit above wherever it currently is. */
+.bugdot[data-corner="br"] { right: 18px; bottom: calc(var(--dock-h) + 18px); }
+.bugdot[data-corner="bl"] { left: 18px;  bottom: calc(var(--dock-h) + 18px); }
+.bugdot[data-corner="tr"] { right: 18px; top: calc(var(--menubar-h) + 16px); }
+
+body[data-dock="left"]  .bugdot[data-corner="bl"] { left: calc(var(--dk-size) + 46px); }
+body[data-dock="right"] .bugdot[data-corner="br"] { right: calc(var(--dk-size) + 46px); }
+body[data-dock="left"]  .bugdot[data-corner="br"],
+body[data-dock="right"] .bugdot[data-corner="bl"],
+body[data-dock="hidden"] .bugdot { bottom: 22px; }
+
+.bugdot:hover {
+  transform: translateY(-3px) scale(1.06);
+  animation-play-state: paused;
+  box-shadow:
+    inset 0 2px 13px -5px rgb(var(--refract-cool) / 1),
+    inset 0 -2px 13px -5px rgb(var(--refract-warm) / .95),
+    inset 0 0 0 var(--g-thick) rgb(var(--edge-hi) / .42),
+    var(--shadow-deep);
+}
+.bugdot:active { transform: translateY(-1px) scale(.97); }
+
+.bug-art {
+  position: relative;
+  z-index: 2;
+  /* Dispersion, not glow. At 27px a 2px chromatic shadow on every side
+     is wider than the legs it is meant to be edging, and the beetle
+     dissolves into a bright smudge — so the split stays sub-pixel and
+     only the dark shadow has any reach. */
+  filter:
+    drop-shadow(0 1px 1.5px rgb(0 0 0 / .5))
+    drop-shadow(.6px 0 .6px rgb(var(--refract-cool) / .4))
+    drop-shadow(-.6px 0 .6px rgb(var(--refract-warm) / .35));
+  transition: transform 200ms var(--ease);
+}
+/* it turns to face you */
+.bugdot:hover .bug-art { transform: rotate(-7deg) scale(1.04); }
+
+/* ── caught something ────────────────────────────────────────── */
+.bugdot.alert {
+  animation: bugTwitch 1.5s ease-in-out infinite;
+  box-shadow:
+    inset 0 2px 12px -5px rgb(var(--refract-cool) / 1),
+    inset 0 -2px 12px -5px hsl(var(--danger) / .8),
+    inset 0 0 0 var(--g-thick) hsl(var(--danger) / .55),
+    0 0 22px -4px hsl(var(--danger) / .5),
+    var(--shadow-lift);
+}
+
+.bug-count {
+  position: absolute;
+  z-index: 3;
+  top: -3px; right: -3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--r-pill);
+  color: #fff;
+  background: hsl(var(--danger) / .92);
+  box-shadow: 0 1px 5px hsl(var(--danger) / .6),
+              inset 0 1px 0 rgb(255 255 255 / .35);
+}
+
+@keyframes bugBreathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-2px) scale(1.02); }
+}
+@keyframes bugTwitch {
+  0%, 62%, 100% { transform: translateY(0) rotate(0); }
+  68%  { transform: translateY(-2px) rotate(-5deg); }
+  74%  { transform: translateY(-1px) rotate(4deg); }
+  80%  { transform: translateY(-2px) rotate(-3deg); }
+  86%  { transform: translateY(0) rotate(0); }
+}
+
+/* Reduced and off motion mean what they say, everywhere. */
+[data-motion="reduced"] .bugdot { animation-duration: 9s; }
+[data-motion="off"] .bugdot,
+[data-motion="off"] .bugdot.alert { animation: none; }
+
+/* ── the reporter ───────────────────────────────────────────── */
+.bug-main { padding: 22px 26px 30px; overflow: auto; }
+
+.bug-area {
+  width: 100%;
+  min-height: 84px;
+  resize: vertical;
+  padding: 10px 12px;
+  line-height: 1.55;
+  font-size: 12.5px;
+}
+
+.bug-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  margin-top: 7px;
+  border-radius: var(--g-radius-xs);
+  background: rgb(var(--g-tint) / .07);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .12);
+  cursor: pointer;
+  transition: background 140ms linear;
+}
+.bug-row:hover { background: rgb(var(--g-tint) / .15); }
+.bug-rt { flex: 1; min-width: 0; }
+.bug-rt b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bug-rt i {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.bug-go { color: var(--text-3); display: flex; }
+
+/* severity as a bead of coloured glass, not a word */
+.bug-sev {
+  width: 9px; height: 9px;
+  flex: none;
+  border-radius: var(--r-round);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .4);
+}
+.bug-sev[data-sev="cosmetic"] { background: hsl(var(--ok) / .8); box-shadow: 0 0 8px hsl(var(--ok) / .5); }
+.bug-sev[data-sev="annoying"] { background: hsl(38 92% 62% / .9); box-shadow: 0 0 8px hsl(38 92% 62% / .5); }
+.bug-sev[data-sev="broken"]   { background: hsl(var(--danger) / .9); box-shadow: 0 0 8px hsl(var(--danger) / .55); }
+
+.bug-errs { margin-top: 8px; }
+.bug-err {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: .5px solid rgb(var(--edge-hi) / .07);
+}
+.bug-err > div { flex: 1; min-width: 0; }
+.bug-err b {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  word-break: break-word;
+}
+.bug-err i {
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--text-3);
+  font-family: ui-monospace, Consolas, monospace;
+}
+.bug-ek {
+  flex: none;
+  padding: 1px 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  border-radius: var(--g-radius-2xs);
+  color: hsl(var(--danger) / .95);
+  background: hsl(var(--danger) / .16);
+}
+.bug-ew {
+  flex: none;
+  font-size: 10.5px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}

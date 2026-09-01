@@ -1,0 +1,186 @@
+/* ═══════════════════════════════════════════════════════════════
+   lang.css — scripts, and which way round the interface goes
+
+   Two separate claims, kept separate on purpose:
+
+     dir="rtl"          Arabic text reads right to left. This is not
+                        optional and not a preference; it is how the
+                        script works, so it is on by default for an
+                        RTL language.
+
+     data-mirror="on"   the *layout* flips too — dock, menu bar, title
+                        bars, sidebars. That is a much bigger change,
+                        it is opt-in, and the rules that hold the
+                        structure still below are what it switches off.
+
+   Between the two, choosing Arabic gives you correctly-rendered
+   Arabic in a layout you still recognise, and mirroring is there for
+   anyone who wants the real thing.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── script-aware type ──────────────────────────────────────────
+   The system stack has no opinion about Devanagari or Arabic, and
+   the fallback it picks is usually a size or two too small next to
+   Latin. Naming the faces and nudging the size keeps the menu bar
+   from changing height when the language changes. */
+[data-lang="hi"] body,
+[data-lang="hi"] input,
+[data-lang="hi"] textarea {
+  font-family: "Nirmala UI", "Noto Sans Devanagari", "Mangal",
+               -apple-system, "Segoe UI", system-ui, sans-serif;
+}
+[data-lang="ar"] body,
+[data-lang="ar"] input,
+[data-lang="ar"] textarea {
+  font-family: "Segoe UI", "Noto Naskh Arabic", "Geeza Pro", Tahoma,
+               -apple-system, system-ui, sans-serif;
+  letter-spacing: 0;
+}
+[data-lang="ja"] body,
+[data-lang="ja"] input,
+[data-lang="ja"] textarea {
+  font-family: -apple-system, "Yu Gothic UI", "Hiragino Sans",
+               "Noto Sans JP", "Meiryo", "Segoe UI", system-ui, sans-serif;
+}
+
+/* CJK and Devanagari carry more ink per glyph, so the tight tracking
+   the Latin faces wanted works against them. */
+[data-lang="ja"] .mi, [data-lang="ja"] .side-item,
+[data-lang="hi"] .mi, [data-lang="hi"] .side-item { letter-spacing: 0; }
+
+/* Devanagari needs the extra leading or the matras clip. */
+[data-lang="hi"] .mi, [data-lang="hi"] .lch-row b,
+[data-lang="hi"] .st-h, [data-lang="hi"] .side-item { line-height: 1.7; }
+
+/* ── right to left ─────────────────────────────────────────────
+   Text flows the other way everywhere, and then these put the
+   structure back — unless mirroring is switched on. */
+html[dir="rtl"] { text-align: start; }
+
+html[dir="rtl"][data-mirror="off"] .menubar,
+html[dir="rtl"][data-mirror="off"] .dock,
+html[dir="rtl"][data-mirror="off"] .win-bar,
+html[dir="rtl"][data-mirror="off"] .win-lights,
+html[dir="rtl"][data-mirror="off"] .win-tools,
+html[dir="rtl"][data-mirror="off"] .app-side,
+html[dir="rtl"][data-mirror="off"] .desk-icons,
+html[dir="rtl"][data-mirror="off"] .g-seg,
+html[dir="rtl"][data-mirror="off"] .land-avgrid,
+html[dir="rtl"][data-mirror="off"] .land-glyphs {
+  direction: ltr;
+}
+
+/* Numbers, keys and paths are left-to-right in every language. */
+html[dir="rtl"] .mi .k,
+html[dir="rtl"] .mb-clock,
+html[dir="rtl"] .st-kv b,
+html[dir="rtl"] .zm-app-row i,
+html[dir="rtl"] .lch-row i {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* The menu rows keep their icon-then-label order in either mode; only
+   the text inside each label turns around. */
+html[dir="rtl"][data-mirror="on"] .mi { flex-direction: row-reverse; }
+html[dir="rtl"][data-mirror="on"] .mi .k { margin-left: 0; margin-right: auto; }
+
+/* ── the language pane ─────────────────────────────────────── */
+.lg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.lg-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 13px;
+  text-align: left;
+  border: 0;
+  border-radius: var(--g-radius-xs);
+  background: rgb(var(--g-tint) / .09);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .15);
+  cursor: pointer;
+  transition: background 150ms linear, box-shadow 150ms linear;
+}
+.lg-tile:hover { background: rgb(var(--g-tint) / .17); }
+.lg-tile.on {
+  background: hsl(var(--accent) / .2);
+  box-shadow: inset 0 0 0 .5px hsl(var(--accent) / .55);
+}
+.lg-tile b { font-size: 14px; font-weight: 600; }
+.lg-tile i {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.lg-tile .lg-rtl {
+  position: absolute;
+  top: 9px; right: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--text-3);
+}
+
+/* ── the first-run picker ────────────────────────────────────────
+   Small chips on the welcome card, because language is the one choice
+   that changes how every later step reads. */
+.land-langs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 22px auto 0;
+  max-width: 400px;
+}
+.land-langs button {
+  padding: 6px 12px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  border-radius: var(--r-pill);
+  background: rgb(var(--g-tint) / .10);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .18);
+  cursor: pointer;
+  transition: background 150ms linear, color 150ms linear;
+}
+.land-langs button:hover { background: rgb(var(--g-tint) / .2); color: var(--text); }
+.land-langs button.on {
+  color: var(--text);
+  background: hsl(var(--accent) / .28);
+  box-shadow: inset 0 0 0 .5px hsl(var(--accent) / .6);
+}
+
+/* the coverage bar, and the list of phrases still in English */
+.lg-gap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: .5px solid rgb(var(--edge-hi) / .07);
+}
+.lg-gap > span {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lg-gap input {
+  width: 42%;
+  flex: none;
+  padding: 5px 9px;
+  font-size: 12px;
+  border: 0;
+  border-radius: var(--g-radius-2xs);
+  background: rgb(var(--g-tint) / .12);
+  box-shadow: inset 0 0 0 .5px rgb(var(--edge-hi) / .16);
+  color: var(--text);
+  outline: none;
+}
+.lg-gap input:focus { box-shadow: inset 0 0 0 1px hsl(var(--accent) / .7); }
