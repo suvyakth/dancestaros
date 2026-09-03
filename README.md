@@ -9,6 +9,8 @@ stacked over other windows refract each other.
 
 No frameworks. No build step. No image files. Open `index.html` and it runs.
 
+**Version 1.5 — Second Light** · MIT licensed · zero dependencies
+
 ---
 
 ## Run it
@@ -800,8 +802,10 @@ css/
   zoom.css          system zoom, window zoom, the menu-bar readout
   lang.css          per-script type, right-to-left, the language pane
   bugs.css          the beetle and the reporter
+  tour.css          the guided tutorial: the spotlight and the coach
   games.css         the Games app: shelf, score bar, the seven boards,
                     the achievement wall and the locker
+  responsive.css    the same OS on a phone — loaded last, so it wins
 js/
   core/
     util.js         hyperscript + line-art icon set, avatar presets
@@ -811,15 +815,22 @@ js/
                     wrapping, text direction
     zoom.js         system + window zoom, and the coordinate helpers
                     every pointer conversion goes through
+    form.js         classifies the viewport (phone / tablet / desktop)
+                    onto <html data-form>, so CSS and the window
+                    manager agree about what machine this is
     glass.js        optical runtime: tokens, accent, presets, wallpaper,
                     refraction, sheen, dock geometry, perf mode
     fs.js           virtual file system (media-aware)
     lock.js         passcode hashing, the keypad, the challenge dialog
+    users.js        accounts: each user owns a snapshot of the one
+                    state key, and switching is save-mine, load-theirs
     bugs.js         error capture, the beetle, filing and diagnostics
     awards.js       the Games app's memory: per-game counters, the
                     achievements and unlockable looks that are
                     thresholds on them
     actions.js      the action registry + the custom shortcut engine
+    tour.js         the guided tutorial, and DS.demo — tips that
+                    perform themselves instead of describing
     media.js        IndexedDB blob store, import, export, quota
     time.js         synthesised chimes + the alarm daemon
     focus.js        the Flowmodoro / Pomodoro engine
@@ -877,6 +888,13 @@ DS.settingsPanes.push({
   build: function (host, ctx) { host.appendChild(DS.h("h2.st-h", { text: "Mine" })); }
 });
 ```
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE). Use it, fork it, take the glass system and put it
+in something else. Attribution is the only condition.
 
 ---
 

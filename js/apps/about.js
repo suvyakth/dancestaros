@@ -33,7 +33,7 @@
         }),
         h("div", {}, [
           h("div.ab-name", {}, [h("span", { text: "Dancestar" }), h("b", { text: "OS" })]),
-          h("div.ab-ver", { text: "Version 1.0 — First Light" }),
+          h("div.ab-ver", { text: "Version 1.5 — Second Light" }),
           h("div.ab-tag", { text: "A web operating system with no opaque pixels." })
         ])
       ]));
