@@ -15,6 +15,13 @@ No frameworks. No build step. No image files. Open `index.html` and it runs.
 
 ## Run it
 
+**[Live → suvyakth.github.io/dancestaros](https://suvyakth.github.io/dancestaros/)**
+
+No sign-up, no passcode, nothing to install. It runs entirely in your browser
+and everything it saves stays in your own `localStorage`.
+
+Or locally:
+
 ```
 # double-click index.html, or:
 python -m http.server 8777
@@ -898,4 +905,7 @@ in something else. Attribution is the only condition.
 
 ---
 
-Built for the Hack Club webOS challenge.
+Built for **Hack Club WebOS 1**. The brief was a webpage with draggable
+windows; the windows were finished in the first evening, and everything after
+that — the five-layer glass, the three labs, the seven games, accounts, seven
+languages — was the interesting part.
